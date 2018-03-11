@@ -66,7 +66,9 @@ export class GameContext{
 	}
 
 	player: Actor
-	enemy: Actor
+	enemy: Actor //固定定義
+
+	enemies: Array<Actor> //マスターデータ取得テスト
 
 	get currentFloorInfo(): Array<FloorRuleKind>{
 		// return []
@@ -88,13 +90,32 @@ export class GameContext{
 		this.player.isSleep = false
 
 		this.enemy = new Actor()
-		this.enemy.kind = ActorKind.Enemy
-		this.enemy.name = "ドラゴン"
-		this.enemy.attack = 6
-		this.enemy.attackVariable = 10
-		this.enemy.hp = new MaxLimitedNumber(120)
-		this.enemy.mp = new MaxLimitedNumber(30)
-		this.enemy.isSleep = false
+		// this.enemy.kind = ActorKind.Enemy
+		// this.enemy.name = "ドラゴン"
+		// this.enemy.attack = 6
+		// this.enemy.attackVariable = 10
+		// this.enemy.hp = new MaxLimitedNumber(120)
+		// this.enemy.mp = new MaxLimitedNumber(30)
+		// this.enemy.isSleep = false
+	}
+
+	setEnemiesByMasterData(json){
+		this.enemies = new Array<Actor>()
+		for(const master of json){
+			// console.log(master);
+			const actor: Actor = new Actor
+			actor.name = master.name
+			actor.attack = master.attack
+			actor.attackVariable = master.attackVariable
+			actor.hp = new MaxLimitedNumber(master.hp)
+			actor.mp = new MaxLimitedNumber(master.mp)
+			this.enemies.push(actor)
+		}
+		console.log(this.enemies)
+	}
+
+	setNextEnemy(){
+		this.enemy = this.enemies[Math.floor(Math.random()*this.enemies.length)]
 	}
 
 	apply(newContext: ApplicableGameContext){
@@ -159,13 +180,13 @@ export class Actor{
 	kind: ActorKind
 
 	name: string
-	hp: MaxLimitedNumber //HP
+	hp: MaxLimitedNumber = new MaxLimitedNumber(0) //HP
 	attack: number //基礎攻撃力
 	attackVariable: number //追加ランダム攻撃力(仮)
 	deffence: number //基礎防御力
 	satiety: number //満腹度 0.0-1.0
 
-	mp: MaxLimitedNumber //HP
+	mp: MaxLimitedNumber = new MaxLimitedNumber(0) //HP
 
 	currentButtleActionKind: ButtleActionKind
 
@@ -173,7 +194,7 @@ export class Actor{
 	// deflatedEvent,
 	// damagedEvent,
 
-	isSleep: boolean
+	isSleep: boolean = false
 	// constructor(){
 	// 	this.hp = new MaxLimitedNumber()
 	// }

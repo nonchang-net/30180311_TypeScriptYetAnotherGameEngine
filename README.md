@@ -188,13 +188,17 @@ npm run dev
 	- MPは自動回復するルールでいこう。
 		- これはマップルールとしたい。ドレインされるフロアもあり、通常は回復する、回復しないフロアもある……というような。
 
+- 19:50
+	- とりあえずマスターデータ読み込みはできたのだけど、コミット前にモックアップ置き換えは実装しておきたいな。
+	- コピペで用意。main.tsのreadonlyフラグで差し替えられるように。
+
 
 ### 改善案のメモ
 
 - 20180311日曜日
 
 	- `設計上の改善案1`
-		- まず、冗長な型情報をどうにかしたい……。
+		- まず、冗長な型情報の記述をどうにかしたい……。
 			GameEvent.Manager.subscribe<GameEvent.TestRule.PlayerIntoSleeping>(
 				new GameEvent.TestRule.PlayerIntoSleeping((event)=>{
 					this.add(`sleepの魔法を受けた。${context.player.name}は眠ってしまった！`)
@@ -204,9 +208,11 @@ npm run dev
 			GameEvent.Manager.subscribe(EventEnum.PlayerDamaged,(damage)=>{
 				this.add(`${context.player.name}は${damage}のダメージを受けた！`)
 			})
+		- 方法がわからない。次項の「enumでいいのでは？」という検討と差し替えられないか検討してみたい。
+			- GameEvent2クラスを作って、同等の動きができないか……という検討になりそう。型情報で分けず、enumを別定義することは泣く泣くやる、という方向になるだろうか。
 
 	- `イベント引数はどう扱うべきか？`
-		- スーパーグローバル「GameContext」導入のおかげで、そもそも**イベントは引数を持つ必要がない**状態になっていることに、今更気づいた。
+		- スーパーグローバル「GameContext」導入のおかげで、そもそも**イベントは引数を持つ必要性があまりない**状態になっていることに、今更気づいた。
 			- それなら、型で頑張らなくてもただのenumでよかったか？
 			- いや。damageイベントでは「幾つのダメージを受けたのか」という情報が欲しい。
 			- ただのenumではなく、追加のイベント情報を渡せる仕組みはやはり必要かもしれない……。（その意味では、今の設計で各々のイベントがクラスなのは、自由に追加情報を渡せる手軽さと型安全性がある）
@@ -230,6 +236,18 @@ npm run dev
 			- キューに追加することになるな。
 			- ゲームステートの適切な管理が必要だろう。
 			- 行動可能な時とメッセージが残っている時、イベント内容によって画面を揺らしたり効果音を発生したりする必要がある。
+	
+	- `TODO: 敵情報をマスターデータ経由で取得`
+		- https://script.googleusercontent.com/macros/echo?user_content_key=yKK-ZUzj02ZwKXWFT39B8QquttV0bC9w57OUmnUBof-pCFXaMcQ-BJdATX6I2Dymszq5_qJOMQhWpcZG1F34RX92QEzmgSyfm5_BxDlH2jW0nuo2oDemN9CCS2h10ox_1xSncGQajx_ryfhECjZEnAJjrIvQ97z0RW-0xPK1w48qcTuPdn844uwwbw2T51YtYioAfvWxA81WU9kqGDrfop0mgLDwm9cO&lib=Mm0OfG4rpMmjOijnmsnJqouS5Zx1wbZ9l
+		- とりあえずGoogle Spread Sheetから取得できる最低限の用意は整った。
+		- S3に書き出さなきゃな……。
+		- GASの制限はわりとゆるいので、一旦はこれで良いかも。
+			- https://routecompass.net/gas-ana/
+			- ただ、デプロイ施策は`20180225_NGS_ゲームサーバ再考.md`で実現できているので、リリース時点の運用をイメージしたマスターデータ配信はやっちゃいたい。
+			- ていうか良くねえ！ `遅い！！`
+			- ビルドのたびに通信してたら辛いよ、これ。
+
+	
 
 
 `EOF`

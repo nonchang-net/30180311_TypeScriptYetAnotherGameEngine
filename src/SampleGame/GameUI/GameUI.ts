@@ -110,8 +110,10 @@ export default class UI{
 					case GameContext.GameState.Battle :
 						gameState.innerText = "battle scene"
 						messages.add(`あなたは洞窟に入った。`)
-						messages.add(`${context.enemy.name}が現れた！`)
+						context.setNextEnemy()
+						enemyStatus.update(context.enemy)
 						enemyStatus.dom.style.display = "block"
+						messages.add(`${context.enemy.name}が現れた！`)
 						break
 
 					default :
