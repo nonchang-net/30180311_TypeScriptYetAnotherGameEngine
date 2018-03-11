@@ -68,6 +68,19 @@ export class StartBattleTurn implements GameContext.RuleBase{
 	): GameContext.ApplicableGameContext{
 		let result = new GameContext.ApplicableGameContext()
 
+		//フロアルール適用
+		const floorRules = context.currentFloorInfo
+		for(const floorRule of floorRules){
+			switch(floorRule){
+				case GameContext.FloorRuleKind.MPGain :
+					result.append(InvokeMPGainByFloorRule.apply(context,1))
+					break
+				case GameContext.FloorRuleKind.MPGainHard :
+					result.append(InvokeMPGainByFloorRule.apply(context,10))
+					break
+			}
+		}
+
 		//行動種別をcontextに保存
 		context.player.currentButtleActionKind = actionKind
 		//敵は一旦一律でattack
@@ -81,8 +94,29 @@ export class StartBattleTurn implements GameContext.RuleBase{
 			secondActor = context.player
 		}
 
-		result = InvokeBattleAction.apply(context,firstActor,secondActor)
+		result.append(InvokeBattleAction.apply(context,firstActor,secondActor))
 		result.append(InvokeBattleAction.apply(context,secondActor,firstActor))
+
+		return result
+	}
+}
+
+//フロア効果: 毎ターンMP回復
+
+export class InvokeMPGainByFloorRule implements GameContext.RuleBase{
+	static apply(
+		context: GameContext.GameContext,
+		point: number
+	): GameContext.ApplicableGameContext{
+		const result = new GameContext.ApplicableGameContext()
+
+		context.player.mp.current += point
+		context.player.mp.limit()
+		context.enemy.mp.current += point
+		context.enemy.mp.limit()
+		const ev = new GameEvent.Common.InvokeFloorEffectMPGain()
+		ev.point = point
+		result.onApplicatedEvents.push(ev)
 
 		return result
 	}
@@ -184,12 +218,27 @@ export class InvokeAttack implements GameContext.RuleBase{
 
 //スリープマジック
 export class InvokeSleepMagic implements GameContext.RuleBase{
+
+	static readonly REQUIRED_MP = 12 //TODO: MasterData化
+
 	static apply(
 		context: GameContext.GameContext,
 		actor:  GameContext.Actor,
 		target: GameContext.Actor
 	): GameContext.ApplicableGameContext{
 		const result = new GameContext.ApplicableGameContext()
+
+		if(actor.mp.current < this.REQUIRED_MP){
+			//MP足りない！ 発動せずターン終了
+			const ev = new GameEvent.Common.MagicPointNotQuarified()
+			ev.actor = actor
+			ev.action = actor.currentButtleActionKind
+			result.onApplicatedEvents.push(ev)
+			return result
+		}
+
+		actor.mp.current -= this.REQUIRED_MP
+
 		if(target.isSleep){
 			//すでに寝てるよ
 			const ev = new GameEvent.Common.SleepMagicAlreadySleeping()
@@ -218,18 +267,36 @@ export class InvokeSleepMagic implements GameContext.RuleBase{
 
 
 export class InvokeCureMagic implements GameContext.RuleBase{
+
+	static readonly REQUIRED_MP = 3  //TODO: MasterData化
+	
 	static apply(
 		context: GameContext.GameContext,
 		actor:  GameContext.Actor,
 		target: GameContext.Actor
 	): GameContext.ApplicableGameContext{
+
 		const result = new GameContext.ApplicableGameContext()
+
+
+		if(actor.mp.current < this.REQUIRED_MP){
+			//MP足りない！ 発動せずターン終了
+			const ev = new GameEvent.Common.MagicPointNotQuarified()
+			ev.actor = actor
+			ev.action = actor.currentButtleActionKind
+			result.onApplicatedEvents.push(ev)
+			return result
+		}
+
+		actor.mp.current -= this.REQUIRED_MP
+
 		let curePoint = Math.floor( Math.random() * 20 ) + 8
 		if(actor.hp.current + curePoint > actor.hp.max){
 			curePoint = actor.hp.max - actor.hp.current
 		}
 		target.hp.current += curePoint
 		const ev = new GameEvent.Common.CureMagicSucceed()
+		ev.actor = actor
 		ev.target = target
 		ev.curePoint = curePoint
 		result.onApplicatedEvents.push(ev)

@@ -5,7 +5,7 @@ import * as GameEvent from '../GameEvent';
 
 export default class Utils{
 
-	static GetPraragraph(body: string): HTMLParagraphElement{
+	static GetPraragraph(body: string=""): HTMLParagraphElement{
 		const p = document.createElement("p")
 		p.innerHTML = body
 		return p

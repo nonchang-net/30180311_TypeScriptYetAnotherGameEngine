@@ -34,25 +34,36 @@ window.addEventListener('DOMContentLoaded', () => {
 	);
 });
 
-//shorthand class test
-// class Utils{
-// 	subscribe<T>(arg){
-// 		GameEvent.Manager.subscribe(arg)
-// 	}
-// }
-
 class Main{
-// class Main extends Utils{
+
+	//TODO: 専用のマスターデータ作成TODO
+	readonly MASTER_DATA_URL: string = "https://s3-ap-northeast-1.amazonaws.com/thirty-five-engineer-blogspot-files/inventory/items.json"
 
 	constructor(uiElement: HTMLElement){
 		// super()
-		let context: GameContext.GameContext = new GameContext.GameContext
-		new UI(context, uiElement)
+		const context = new GameContext.GameContext
+		const ui = new UI(context, uiElement)
+
+		//S3に置いたマスターデータを取得してみる
+		;(async ()=>{
+			try {
+				//テスト用: 通信待ちエミュレーション
+				await new Promise(r => setTimeout(r, 500));
+				//fetch
+				let response = await fetch(this.MASTER_DATA_URL);
+				return response.json();
+			} catch(e) {
+				console.log("Error!");
+			}
+		})().then((data)=>{
+			// console.log("fetch succeed.",data);
+			ui.nowloading.style.display = "none"
+		})
 
 		// 初期化イベント
 		context.setState(GameContext.GameState.Title)
 
-		//とりあえず簡単なテスト
+		//テスト
 		// Event.Tests.test()
 	}
 

@@ -26,10 +26,30 @@ import { default as MessageDiv } from './MessageDiv';
 
 export default class UI{
 
+	nowloading: HTMLDivElement
+
 	constructor(
 		context: GameContext.GameContext,
 		uiElement: HTMLElement
 	){
+
+		const nowloading = document.createElement("div")
+		this.nowloading = nowloading
+		nowloading.innerHTML=`
+			now loading...
+		`
+		{
+			let style=nowloading.style
+			// style.display = "table-cell"
+			style.position = "absolute"
+			style.textAlign = "center"
+			// style.verticalAlign = "middle"
+			style.background = "rgba(200,200,200,0.8)"
+			style.width = "100%"
+			style.height = "100%"
+		}
+		uiElement.appendChild(nowloading)
+
 
 		const all = document.createElement("div")
 		all.style.padding = "0.5em"
@@ -142,6 +162,15 @@ export default class UI{
 			})
 		)
 
+
+		//MAGIC!
+
+		GameEvent.Manager.subscribe<GameEvent.Common.MagicPointNotQuarified>(
+			new GameEvent.Common.MagicPointNotQuarified((event)=>{
+				messages.add(`${event.actor.name}は魔法を唱えようとしたが、MPが足りない！`)
+			})
+		)
+
 		GameEvent.Manager.subscribe<GameEvent.Common.SleepMagicSucceed>(
 			new GameEvent.Common.SleepMagicSucceed((event)=>{
 				playerStatusDiv.update(context.player)
@@ -171,6 +200,20 @@ export default class UI{
 				playerStatusDiv.update(context.player)
 				enemyStatus.update(context.enemy)
 				messages.add(`${event.actor.name}は cure magicを唱えた！ ${event.target.name}のHPが${event.curePoint}回復した。`)
+			})
+		)
+
+		//floor effects
+
+		GameEvent.Manager.subscribe<GameEvent.Common.InvokeFloorEffectMPGain>(
+			new GameEvent.Common.InvokeFloorEffectMPGain((event)=>{
+				playerStatusDiv.update(context.player)
+				enemyStatus.update(context.enemy)
+				if(event.point>=10){
+					messages.add(`異常な濃度の霊気によりMPが${event.point}回復した。`)
+				}else{
+					messages.add(`潤沢な霊気の加護によりMPが${event.point}回復した。`)
+				}
 			})
 		)
 

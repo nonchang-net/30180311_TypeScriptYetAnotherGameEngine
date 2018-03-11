@@ -157,6 +157,17 @@ export namespace Common{
 	}
 
 
+	//magic common
+	export class MagicPointNotQuarified extends Event.EventBase<MagicPointNotQuarified>{
+		actor: GameContext.Actor
+		action: GameContext.ButtleActionKind
+		//boilerplate
+		static _dispatcher: Event.SimpleEventDispatcher<MagicPointNotQuarified> = new Event.SimpleEventDispatcher<MagicPointNotQuarified>()
+		get dispatcher(){ return MagicPointNotQuarified._dispatcher }
+	}
+
+
+
 	//sleep magic
 
 	//sleep magicが成功した
@@ -197,5 +208,17 @@ export namespace Common{
 		static _dispatcher: Event.SimpleEventDispatcher<CureMagicSucceed> = new Event.SimpleEventDispatcher<CureMagicSucceed>()
 		get dispatcher(){ return CureMagicSucceed._dispatcher }
 	}
+
+
+	//floor effects
+	export class InvokeFloorEffectMPGain extends Event.EventBase<InvokeFloorEffectMPGain>{
+
+		point: number
+
+		//boilerplate
+		static _dispatcher: Event.SimpleEventDispatcher<InvokeFloorEffectMPGain> = new Event.SimpleEventDispatcher<InvokeFloorEffectMPGain>()
+		get dispatcher(){ return InvokeFloorEffectMPGain._dispatcher }
+	}
+
 
 }

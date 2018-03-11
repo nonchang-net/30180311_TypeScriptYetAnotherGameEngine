@@ -68,6 +68,11 @@ export class GameContext{
 	player: Actor
 	enemy: Actor
 
+	get currentFloorInfo(): Array<FloorRuleKind>{
+		// return []
+		return [FloorRuleKind.MPGain]
+	}
+
 	constructor(){
 		this.init()
 	}
@@ -79,6 +84,7 @@ export class GameContext{
 		this.player.attack = 3
 		this.player.attackVariable = 5
 		this.player.hp = new MaxLimitedNumber(30)
+		this.player.mp = new MaxLimitedNumber(100)
 		this.player.isSleep = false
 
 		this.enemy = new Actor()
@@ -87,6 +93,7 @@ export class GameContext{
 		this.enemy.attack = 6
 		this.enemy.attackVariable = 10
 		this.enemy.hp = new MaxLimitedNumber(120)
+		this.enemy.mp = new MaxLimitedNumber(30)
 		this.enemy.isSleep = false
 	}
 
@@ -114,6 +121,17 @@ export enum ButtleActionKind{
 	Attack,
 	SleepMagic,
 	CureMagic,
+}
+
+//場所によるルール種別。フロアセルがListで持つことを想定しているのでNormalはない。（つまり、ルール適用がない場合はListが空。）
+export enum FloorRuleKind{
+	MPGain, //行動のたびにMPが1回復する
+	MPGainHard, //行動のたびにMPが10回復する「マナが潤沢なフロア＝悪魔に都合が良い世界」
+	MPDrain, //行動のたびにMPが1ずつ減っていく
+	MPDrainHard, //MPが10ずつ減っていく: 「物理攻撃力がモノを言う世界」
+
+	HPDrain, //行動のたびにHPが1ずつ減っていく - 「毒の床」
+	HPDrainHard, //行動のたびにHPが10ずつ減っていく - 「一刻も早くここから逃げ出さないと！」
 }
 
 //適用コンテキスト
@@ -147,6 +165,8 @@ export class Actor{
 	deffence: number //基礎防御力
 	satiety: number //満腹度 0.0-1.0
 
+	mp: MaxLimitedNumber //HP
+
 	currentButtleActionKind: ButtleActionKind
 
 	// 保留中: このActorに関するstate change eventを個別に登録できないか検討した跡。
@@ -170,5 +190,8 @@ class MaxLimitedNumber{
 	max: number
 	constructor(max: number){
 		this.current = this.max = max
+	}
+	limit(){
+		if(this.current > this.max) this.current = this.max
 	}
 }

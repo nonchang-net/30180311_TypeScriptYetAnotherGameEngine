@@ -8,8 +8,10 @@ export default class StatusDiv{
 
 	dom: HTMLDivElement
 
-	private hpString = "hp: [[]]"
+	private hpString = "HP: [[]]"
 	private hp: HTMLParagraphElement
+	private mpString = "MP: [[]]"
+	private mp: HTMLParagraphElement
 
 	private nameString = "name: [[0]][[1]]"
 	private name: HTMLParagraphElement
@@ -30,11 +32,14 @@ export default class StatusDiv{
 		this.name = Utils.GetPraragraph(this.nameString)
 		dom.appendChild(this.name)
 
-		this.hp = Utils.GetPraragraph(this.hpString)
+		this.hp = Utils.GetPraragraph()
 		dom.appendChild(this.hp)
 
-		const satiety = Utils.GetPraragraph("satiety: [[]]")
-		dom.appendChild(satiety)
+		this.mp = Utils.GetPraragraph()
+		dom.appendChild(this.mp)
+
+		// const satiety = Utils.GetPraragraph("satiety: [[]]")
+		// dom.appendChild(satiety)
 
 		this.update(actorContext)
 	}
@@ -60,6 +65,12 @@ export default class StatusDiv{
 			"[[]]",
 			actorContext.hp.current.toString() + " / " + 
 			actorContext.hp.max.toString()
+		)
+
+		this.mp.innerHTML = this.mpString.replace(
+			"[[]]",
+			actorContext.mp.current.toString() + " / " + 
+			actorContext.mp.max.toString()
 		)
 	}
 
