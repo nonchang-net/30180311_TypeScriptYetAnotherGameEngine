@@ -58,6 +58,9 @@ class RuleUtils{
 
 }
 
+// バトルターン評価
+// playerのみactionKind振り分け
+
 export class StartBattleTurn implements GameContext.RuleBase{
 	static apply(
 		context: GameContext.GameContext,
@@ -78,15 +81,16 @@ export class StartBattleTurn implements GameContext.RuleBase{
 			secondActor = context.player
 		}
 
-		result = AttackActorToTarget.apply(context,firstActor,secondActor)
-		result.append(AttackActorToTarget.apply(context,secondActor,firstActor))
+		result = InvokeBattleAction.apply(context,firstActor,secondActor)
+		result.append(InvokeBattleAction.apply(context,secondActor,firstActor))
 
 		return result
 	}
 }
 
+//バトルアクション実行
 
-export class AttackActorToTarget implements GameContext.RuleBase{
+export class InvokeBattleAction implements GameContext.RuleBase{
 	static apply(
 		context: GameContext.GameContext,
 		actor:  GameContext.Actor,
@@ -94,7 +98,7 @@ export class AttackActorToTarget implements GameContext.RuleBase{
 	): GameContext.ApplicableGameContext{
 		const result = new GameContext.ApplicableGameContext()
 
-		console.log("actor.currentButtleActionKind: ",actor.currentButtleActionKind)
+		// console.log("actor.currentButtleActionKind: ",actor.currentButtleActionKind)
 
 		if(actor.isSleep){
 			const ev = new GameEvent.Common.ActorIsSleepedAndCanNotAction()
@@ -113,47 +117,29 @@ export class AttackActorToTarget implements GameContext.RuleBase{
 
 		//sleepの魔法をかける
 		if(actor.currentButtleActionKind == GameContext.ButtleActionKind.SleepMagic){
-			if(target.isSleep){
-				//すでに寝てるよ
-				const ev = new GameEvent.Common.SleepMagicAlreadySleeping()
-				ev.actor = actor
-				ev.target = target
-				result.onApplicatedEvents.push(ev)
-				return result
-			}
-			if(Math.random() > 0.2){
-				//sleep magic成功
-				target.isSleep = true
-				const ev = new GameEvent.Common.SleepMagicSucceed()
-				ev.actor = actor
-				ev.target = target
-				result.onApplicatedEvents.push(ev)
-				return result
-			}
-			//sleep magic失敗
-			const ev = new GameEvent.Common.SleepMagicFailed()
-			ev.actor = actor
-			ev.target = target
-			result.onApplicatedEvents.push(ev)
-			return result
+			return InvokeSleepMagic.apply(context, actor, target)
 		}
 
-		//回復の魔法
+		//回復の魔法を自分にかける
 		if(actor.currentButtleActionKind == GameContext.ButtleActionKind.CureMagic){
-			let curePoint = Math.floor( Math.random() * 20 ) + 8
-			if(actor.hp.current + curePoint > actor.hp.max){
-				curePoint = actor.hp.max - actor.hp.current
-			}
-			actor.hp.current += curePoint
-			const ev = new GameEvent.Common.CureMagicSucceed()
-			ev.actor = actor
-			ev.curePoint = curePoint
-			result.onApplicatedEvents.push(ev)
-			return result
+			return InvokeCureMagic.apply(context, actor, actor)
 		}
-
 
 		//攻撃
+		return InvokeAttack.apply(context, actor, target)
+	}
+}
+
+
+//攻撃
+
+export class InvokeAttack implements GameContext.RuleBase{
+	static apply(
+		context: GameContext.GameContext,
+		actor:  GameContext.Actor,
+		target: GameContext.Actor
+	): GameContext.ApplicableGameContext{
+		const result = new GameContext.ApplicableGameContext()
 
 		//攻撃は1/3の確率で外れる
 		if(Math.random() > 0.6){
@@ -195,3 +181,75 @@ export class AttackActorToTarget implements GameContext.RuleBase{
 	}
 }
 
+
+//スリープマジック
+export class InvokeSleepMagic implements GameContext.RuleBase{
+	static apply(
+		context: GameContext.GameContext,
+		actor:  GameContext.Actor,
+		target: GameContext.Actor
+	): GameContext.ApplicableGameContext{
+		const result = new GameContext.ApplicableGameContext()
+		if(target.isSleep){
+			//すでに寝てるよ
+			const ev = new GameEvent.Common.SleepMagicAlreadySleeping()
+			ev.actor = actor
+			ev.target = target
+			result.onApplicatedEvents.push(ev)
+			return result
+		}
+		if(Math.random() > 0.2){
+			//sleep magic成功
+			target.isSleep = true
+			const ev = new GameEvent.Common.SleepMagicSucceed()
+			ev.actor = actor
+			ev.target = target
+			result.onApplicatedEvents.push(ev)
+			return result
+		}
+		//sleep magic失敗
+		const ev = new GameEvent.Common.SleepMagicFailed()
+		ev.actor = actor
+		ev.target = target
+		result.onApplicatedEvents.push(ev)
+		return result
+	}
+}
+
+
+export class InvokeCureMagic implements GameContext.RuleBase{
+	static apply(
+		context: GameContext.GameContext,
+		actor:  GameContext.Actor,
+		target: GameContext.Actor
+	): GameContext.ApplicableGameContext{
+		const result = new GameContext.ApplicableGameContext()
+		let curePoint = Math.floor( Math.random() * 20 ) + 8
+		if(actor.hp.current + curePoint > actor.hp.max){
+			curePoint = actor.hp.max - actor.hp.current
+		}
+		target.hp.current += curePoint
+		const ev = new GameEvent.Common.CureMagicSucceed()
+		ev.target = target
+		ev.curePoint = curePoint
+		result.onApplicatedEvents.push(ev)
+		return result
+	}
+}
+
+/*
+テンプレ
+
+
+export class AttackActorToTarget implements GameContext.RuleBase{
+	static apply(
+		context: GameContext.GameContext,
+		actor:  GameContext.Actor,
+		target: GameContext.Actor
+	): GameContext.ApplicableGameContext{
+		const result = new GameContext.ApplicableGameContext()
+		return result
+	}
+}
+
+*/

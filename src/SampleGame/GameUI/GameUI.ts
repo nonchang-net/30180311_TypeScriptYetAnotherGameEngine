@@ -40,6 +40,13 @@ export default class UI{
 		h1.innerText="awesome my game!"
 		all.appendChild(h1)
 
+		const h2 = document.createElement("h1")
+		h2.innerText="game state"
+		all.appendChild(h2)
+
+		const gameState = document.createElement("p")
+		all.appendChild(gameState)
+
 		const clockParagraph = document.createElement("p")
 		all.appendChild(clockParagraph)
 
@@ -62,38 +69,36 @@ export default class UI{
 		const messages = new MessageDiv(context)
 		all.appendChild(messages.dom)
 
-		//とりあえず
-		messages.add(`${context.enemy.name}が現れた！`)
-
 
 		// ===============
 		// イベント購読
 
-		// GameEvent.Manager.subscribe
-		// 	<GameEvent.Common.PlayerHitPointChanged>
-		// (
-		// 	new GameEvent.Common.PlayerHitPointChanged(
-		// 		12, //ここ、設計がおかしい。subsctiveする側が変化した内容を定義してどうする……。
-		// 		(e)=>{
-		// 			console.log("e.newHitPoint",e.newHitPoint)
-		// 		}
-		// 	)
-		// )
 
-		// GameEvent.Manager.subscribe<GameEvent.TestRule.PlayerIntoSleeping>(
-		// 	new GameEvent.TestRule.PlayerIntoSleeping((event)=>{
-		// 		playerStatusDiv.update(context.player)
-		// 		messages.add(`sleepの魔法を受けた。${context.player.name}は眠ってしまった！`)
-		// 	})
-		// )
+		// GameState変更検知
+		GameEvent.Manager.subscribe<GameEvent.Common.GameStateChanged>(
+			new GameEvent.Common.GameStateChanged((event)=>{
+				switch(context.state){
 
-		// GameEvent.Manager.subscribe<GameEvent.TestRule.PlayerDoSleepButNotSleeping>(
-		// 	new GameEvent.TestRule.PlayerDoSleepButNotSleeping((event)=>{
-		// 		playerStatusDiv.update(context.player)
-		// 		messages.add(`sleepの魔法を受けたが、${context.player.name}は眠っていない。`)
-		// 	})
-		// )
+					case GameContext.GameState.Title :
+						gameState.innerText = "title scene"
+						messages.reset()
+						messages.add(`あなたは洞窟の前に立っている。`)
+						playerStatusDiv.update(context.player)
+						enemyStatus.dom.style.display = "none"
+						break
 
+					case GameContext.GameState.Battle :
+						gameState.innerText = "battle scene"
+						messages.add(`あなたは洞窟に入った。`)
+						messages.add(`${context.enemy.name}が現れた！`)
+						enemyStatus.dom.style.display = "block"
+						break
+
+					default :
+						gameState.innerText = "undefined scene"
+				}
+			})
+		)
 
 		GameEvent.Manager.subscribe<GameEvent.Common.ActorAttackIsHit>(
 			new GameEvent.Common.ActorAttackIsHit((event)=>{
@@ -110,6 +115,7 @@ export default class UI{
 				messages.add(`${event.target.name}は倒れた！`)
 				if(event.target.kind == GameContext.ActorKind.Player){
 					messages.add(`GAME OVER!`)
+					context.setState(GameContext.GameState.GameOver)
 				}
 			})
 		)
@@ -164,7 +170,7 @@ export default class UI{
 			new GameEvent.Common.CureMagicSucceed((event)=>{
 				playerStatusDiv.update(context.player)
 				enemyStatus.update(context.enemy)
-				messages.add(`${event.actor.name}は cure magicを唱えた！ HPが${event.curePoint}回復した。`)
+				messages.add(`${event.actor.name}は cure magicを唱えた！ ${event.target.name}のHPが${event.curePoint}回復した。`)
 			})
 		)
 

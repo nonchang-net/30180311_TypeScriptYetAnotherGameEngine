@@ -58,10 +58,21 @@ import * as GameEvent from './GameEvent';
 // export class GameContext implements YAGEContext.IContext{
 export class GameContext{
 
+	private _state: GameState = GameState.Boot
+	public get state(): GameState{ return this._state }
+	public setState(newState: GameState){
+		this._state = newState
+		GameEvent.Manager.broadcast(new GameEvent.Common.GameStateChanged())
+	}
+
 	player: Actor
 	enemy: Actor
 
 	constructor(){
+		this.init()
+	}
+
+	init(){
 		this.player = new Actor()
 		this.player.kind = ActorKind.Player
 		this.player.name = "勇者"
@@ -88,15 +99,16 @@ export class GameContext{
 			GameEvent.Manager.broadcast(event)
 		}
 	}
+
 }
 
-// enum GameState{
-// 	Boot,
-// 	Title,
-// 	Battle,
-// 	BattleResult,
-// 	GameOver,
-// }
+export enum GameState{
+	Boot,
+	Title,
+	Battle,
+	BattleResult,
+	GameOver,
+}
 
 export enum ButtleActionKind{
 	Attack,

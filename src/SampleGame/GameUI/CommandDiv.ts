@@ -1,3 +1,17 @@
+/*
+
+
+## 検討メモ
+
+- このSampleGameでは、UIコード上で直接ルール評価している。
+
+- この実装では実ゲーム製作時にはスケールしないと思う。
+	- このサンプルアプリでは簡潔な記述のために直接ルール評価を発行しているけど、「UIイベントの発行」に留めたほうが良いと思う。
+	- 大規模なアプリではゲームロジック管理クラスを用意するべき。
+		- そこで、UIイベントに限らずゲーム進行イベントを一元管理した方が良いだろう。
+
+
+*/
 import * as GameContext from '../GameContext';
 import * as GameEvent from '../GameEvent';
 import { default as Utils} from './GameUIUtils';
@@ -6,8 +20,16 @@ import * as Rule1 from '../Rules/GameRule1'
 
 export default class CommandDiv{
 	dom: HTMLDivElement
+	context: GameContext.GameContext
+
+	titleCommandSet: HTMLDivElement
+	battleCommandSet: HTMLDivElement
+	gameoverCommandSet: HTMLDivElement
 
 	constructor(context: GameContext.GameContext){
+
+		this.context = context
+
 		const dom = document.createElement("div")
 		this.dom = dom
 		dom.style.border = "1px solid gray"
@@ -15,37 +37,65 @@ export default class CommandDiv{
 		dom.style.marginBottom = "1em"
 		dom.style.padding = "0.5em"
 
+
 		//コマンドh2
 		const commandHeader = document.createElement("h2")
 		commandHeader.innerText = "コマンド"
 		dom.appendChild(commandHeader)
 
-		//攻撃ボタン
+
+		// ===============
+		// タイトルコマンド
+
+		const titleCommandSet = document.createElement("div")
+		this.titleCommandSet = titleCommandSet
+		dom.appendChild(titleCommandSet)
+
+		const intoDangeon = document.createElement("button")
+		intoDangeon.innerText = "洞窟に入る"
+		intoDangeon.onclick = ()=>{
+			context.setState(GameContext.GameState.Battle)
+		}
+		titleCommandSet.appendChild(intoDangeon)
+		titleCommandSet.appendChild(document.createElement("br"))
+
+
+		// ===============
+		// ゲームオーバー
+
+		const gameoverCommandSet = document.createElement("div")
+		this.gameoverCommandSet = gameoverCommandSet
+		dom.appendChild(gameoverCommandSet)
+
+		const backToTitle = document.createElement("button")
+		backToTitle.innerText = "タイトルに戻る"
+		backToTitle.onclick = ()=>{
+			context.init()
+			context.setState(GameContext.GameState.Title)
+		}
+		gameoverCommandSet.appendChild(backToTitle)
+		gameoverCommandSet.appendChild(document.createElement("br"))
+
+
+		// ===============
+		// バトルコマンド
+
+		const battleCommandSet = document.createElement("div")
+		this.battleCommandSet = battleCommandSet
+		dom.appendChild(battleCommandSet)
+
+		//攻撃
 		const attackButton = document.createElement("button")
 		attackButton.innerText = "たたかう"
 		attackButton.onclick = ()=>{
-			//UIイベントを発行
-			// GameEvent.Manager.broadcast(
-			// 	new GameEvent.TestUI.ButtonClick1()
-			// )
-
-			//ルール実行、適用差分取得
-
-			//note: UI上で直接ルール評価すべきかどうかは要注意。
-			// このサンプルアプリでは簡潔な記述のために直接ルール評価を発行しているけど、大規模なアプリではゲームロジック管理クラスを用意してそこがUIイベントに限らずゲーム進行イベントを一元管理した方が良いだろう。
-
-			// var result =  Rule1.PlayerAttackToEnemy.apply(context)
 			var result =  Rule1.StartBattleTurn.apply(context)
-			
-
-			//適用差分をコンテキストに適用（その先でイベント実行）
 			context.apply(result)
 		}
+		battleCommandSet.appendChild(attackButton)
+		battleCommandSet.appendChild(document.createElement("br"))
 
-		dom.appendChild(attackButton)
-		dom.appendChild(document.createElement("br"))
 
-
+		//sleep magic
 		const sleepMagic = document.createElement("button")
 		sleepMagic.innerText = "スリープの魔法"
 		sleepMagic.onclick = ()=>{
@@ -55,11 +105,11 @@ export default class CommandDiv{
 			)
 			context.apply(result)
 		}
+		battleCommandSet.appendChild(sleepMagic)
+		battleCommandSet.appendChild(document.createElement("br"))
 
-		dom.appendChild(sleepMagic)
-		dom.appendChild(document.createElement("br"))
 
-
+		//cure magic
 		const cureMagic = document.createElement("button")
 		cureMagic.innerText = "回復の魔法"
 		cureMagic.onclick = ()=>{
@@ -69,45 +119,40 @@ export default class CommandDiv{
 			)
 			context.apply(result)
 		}
+		battleCommandSet.appendChild(cureMagic)
+		battleCommandSet.appendChild(document.createElement("br"))
 
-		dom.appendChild(cureMagic)
-		dom.appendChild(document.createElement("br"))
+		// GameState変更検知
+		GameEvent.Manager.subscribe<GameEvent.Common.GameStateChanged>(
+			new GameEvent.Common.GameStateChanged((event)=>{
+				this.update()
+			})
+		)
 
+		this.update()
 
-		//テストボタン1
-		// const testButton1 = document.createElement("button")
-		// testButton1.innerText = "スリープの魔法をplayerにかける"
-		// testButton1.onclick = ()=>{
-		// 	var result =  Rule1.DoSleepMagicToPlayer.apply(context)
-		// 	context.apply(result)
-		// }
-		// dom.appendChild(testButton1)
-
-		// dom.appendChild(document.createElement("br"))
-
-		//テストボタン2
-		// const testButton2 = document.createElement("button")
-		// testButton2.innerText = "test2"
-		// testButton2.onclick = ()=>{
-		// 	GameEvent.Manager.broadcast(
-		// 		new GameEvent.TestUI.ButtonClick2()
-		// 	)
-		// }
-		// dom.appendChild(testButton2)
-
-		// dom.appendChild(document.createElement("br"))
-
-
-		// TODO: 一般ステータス変化をsubscribe
-		// - コマンドパネルは状況によって表示すべきボタンセットが違う。最初に生成しきっておいて、div単位でグループ化して表示制御するなどの措置が必要だろう。
-		// GameEvent.Manager.subscribe<GameEvent.Common.GameStateChanged>(
-		// 	new GameEvent.TestRule.PlayerIntoSleeping((event)=>{
-		// 		this.update(actorContext)
-		// 	})
-		// )
 	}
 
 	private update(){
 
+		this.titleCommandSet.style.display = "none"
+		this.battleCommandSet.style.display = "none"
+		this.gameoverCommandSet.style.display = "none"
+		
+
+		switch(this.context.state){
+
+			case GameContext.GameState.Title :
+				this.titleCommandSet.style.display = "block"
+				break
+
+			case GameContext.GameState.Battle :
+				this.battleCommandSet.style.display = "block"
+				break
+
+			case GameContext.GameState.GameOver :
+				this.gameoverCommandSet.style.display = "block"
+				break
+		}
 	}
 }

@@ -106,6 +106,12 @@ export namespace Common{
 		get dispatcher(){ return ERROR_UNDEFINED._dispatcher }
 	}
 
+	export class GameStateChanged extends Event.EventBase<GameStateChanged>{
+		//boilerplate
+		static _dispatcher: Event.SimpleEventDispatcher<GameStateChanged> = new Event.SimpleEventDispatcher<GameStateChanged>()
+		get dispatcher(){ return GameStateChanged._dispatcher }
+	}
+
 	//actorがtargetにダメージを与えた
 	export class ActorAttackIsHit extends Event.EventBase<ActorAttackIsHit>{
 		actor: GameContext.Actor
@@ -184,7 +190,8 @@ export namespace Common{
 
 	//cure magicが成功した
 	export class CureMagicSucceed extends Event.EventBase<CureMagicSucceed>{
-		actor: GameContext.Actor
+		actor:  GameContext.Actor
+		target: GameContext.Actor
 		curePoint: number
 		//boilerplate
 		static _dispatcher: Event.SimpleEventDispatcher<CureMagicSucceed> = new Event.SimpleEventDispatcher<CureMagicSucceed>()

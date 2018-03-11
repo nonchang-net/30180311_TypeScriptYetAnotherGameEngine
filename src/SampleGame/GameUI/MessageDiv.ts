@@ -61,4 +61,10 @@ export default class MessageDiv{
 		}
 		this.messageSlots[0].innerText = newMessage
 	}
+
+	reset(){
+		for(const slot of this.messageSlots){
+			slot.innerText = ""
+		}
+	}
 }
