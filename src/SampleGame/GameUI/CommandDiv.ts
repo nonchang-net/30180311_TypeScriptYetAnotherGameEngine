@@ -35,7 +35,7 @@ export default class CommandDiv{
 			// このサンプルアプリでは簡潔な記述のために直接ルール評価を発行しているけど、大規模なアプリではゲームロジック管理クラスを用意してそこがUIイベントに限らずゲーム進行イベントを一元管理した方が良いだろう。
 
 			// var result =  Rule1.PlayerAttackToEnemy.apply(context)
-			var result =  Rule1.BattleTurn.apply(context)
+			var result =  Rule1.StartBattleTurn.apply(context)
 			
 
 			//適用差分をコンテキストに適用（その先でイベント実行）
@@ -43,8 +43,36 @@ export default class CommandDiv{
 		}
 
 		dom.appendChild(attackButton)
-
 		dom.appendChild(document.createElement("br"))
+
+
+		const sleepMagic = document.createElement("button")
+		sleepMagic.innerText = "スリープの魔法"
+		sleepMagic.onclick = ()=>{
+			var result =  Rule1.StartBattleTurn.apply(
+				context,
+				GameContext.ButtleActionKind.SleepMagic
+			)
+			context.apply(result)
+		}
+
+		dom.appendChild(sleepMagic)
+		dom.appendChild(document.createElement("br"))
+
+
+		const cureMagic = document.createElement("button")
+		cureMagic.innerText = "回復の魔法"
+		cureMagic.onclick = ()=>{
+			var result =  Rule1.StartBattleTurn.apply(
+				context,
+				GameContext.ButtleActionKind.CureMagic
+			)
+			context.apply(result)
+		}
+
+		dom.appendChild(cureMagic)
+		dom.appendChild(document.createElement("br"))
+
 
 		//テストボタン1
 		// const testButton1 = document.createElement("button")

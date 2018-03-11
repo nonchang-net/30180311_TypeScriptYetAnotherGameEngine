@@ -106,70 +106,6 @@ export namespace Common{
 		get dispatcher(){ return ERROR_UNDEFINED._dispatcher }
 	}
 
-	// 敵がいないのに攻撃しようとした際のエラーイベント
-	// - 検討中。エラーイベントを色々定義し始めるときりがない気がする……。また、想定外エラーで細かくエラーイベントを返しても利用側にできることはない。
-	// export class ERROR_PlayerAttackToDeflatedEnemy extends Event.EventBase<ERROR_PlayerAttackToDeflatedEnemy>{
-	// 	//boilerplate
-	// 	static _dispatcher: Event.SimpleEventDispatcher<ERROR_PlayerAttackToDeflatedEnemy> = new Event.SimpleEventDispatcher<ERROR_PlayerAttackToDeflatedEnemy>()
-	// 	get dispatcher(){ return ERROR_PlayerAttackToDeflatedEnemy._dispatcher }
-	// }
-
-
-	// プレイヤーヒットポイント変更通知
-	//? これ何か設計間違ってるかも……。
-	// - プレイヤーのヒットポイントが変更したことだけ通知すれば、あとはGameContextから対象の情報は取れるかな。
-	// - ただ、イベント経由で追加情報を渡す方法が固まってないような。
-	export class PlayerHitPointChanged extends Event.EventBase<PlayerHitPointChanged>{
-
-		newHitPoint: number
-
-		constructor(
-			newHitPoint: number,
-			callback?:(event: PlayerHitPointChanged)=>any
-		){
-			super(callback)
-			this.newHitPoint = newHitPoint
-		}
-
-		//boilerplate
-		static _dispatcher: Event.SimpleEventDispatcher<PlayerHitPointChanged> = new Event.SimpleEventDispatcher<PlayerHitPointChanged>()
-		get dispatcher(){ return PlayerHitPointChanged._dispatcher }
-	}
-
-	//敵がダメージを受けた
-	export class EnemyDamaged extends Event.EventBase<EnemyDamaged>{
-		damage: number = -999
-		//boilerplate
-		static _dispatcher: Event.SimpleEventDispatcher<EnemyDamaged> = new Event.SimpleEventDispatcher<EnemyDamaged>()
-		get dispatcher(){ return EnemyDamaged._dispatcher }
-	}
-
-	//敵を倒した
-	export class EnemyDeflated extends Event.EventBase<EnemyDeflated>{
-		//boilerplate
-		static _dispatcher: Event.SimpleEventDispatcher<EnemyDeflated> = new Event.SimpleEventDispatcher<EnemyDeflated>()
-		get dispatcher(){ return EnemyDeflated._dispatcher }
-	}
-
-
-	//プレイヤーがダメージを受けた
-	export class PlayerDamaged extends Event.EventBase<PlayerDamaged>{
-		damage: number = -999
-		//boilerplate
-		static _dispatcher: Event.SimpleEventDispatcher<PlayerDamaged> = new Event.SimpleEventDispatcher<PlayerDamaged>()
-		get dispatcher(){ return PlayerDamaged._dispatcher }
-	}
-
-	//プレイヤーが倒された
-	export class PlayerDeflated extends Event.EventBase<PlayerDeflated>{
-		//boilerplate
-		static _dispatcher: Event.SimpleEventDispatcher<PlayerDeflated> = new Event.SimpleEventDispatcher<PlayerDeflated>()
-		get dispatcher(){ return PlayerDeflated._dispatcher }
-	}
-
-
-	//actor, targetを指定できるように汎用化
-
 	//actorがtargetにダメージを与えた
 	export class ActorAttackIsHit extends Event.EventBase<ActorAttackIsHit>{
 		actor: GameContext.Actor
@@ -190,6 +126,22 @@ export namespace Common{
 		get dispatcher(){ return ActorAttackIsHitAndDeflated._dispatcher }
 	}
 
+	//actorは寝ていて動けない
+	export class ActorIsSleepedAndCanNotAction extends Event.EventBase<ActorIsSleepedAndCanNotAction>{
+		actor: GameContext.Actor
+		//boilerplate
+		static _dispatcher: Event.SimpleEventDispatcher<ActorIsSleepedAndCanNotAction> = new Event.SimpleEventDispatcher<ActorIsSleepedAndCanNotAction>()
+		get dispatcher(){ return ActorIsSleepedAndCanNotAction._dispatcher }
+	}
+
+	//actorが目を覚ました
+	export class ActorIsWakeUp extends Event.EventBase<ActorIsWakeUp>{
+		actor: GameContext.Actor
+		//boilerplate
+		static _dispatcher: Event.SimpleEventDispatcher<ActorIsWakeUp> = new Event.SimpleEventDispatcher<ActorIsWakeUp>()
+		get dispatcher(){ return ActorIsWakeUp._dispatcher }
+	}
+
 	//actorの攻撃が外れた
 	export class AttackMissing extends Event.EventBase<AttackMissing>{
 		actor: GameContext.Actor
@@ -197,4 +149,46 @@ export namespace Common{
 		static _dispatcher: Event.SimpleEventDispatcher<AttackMissing> = new Event.SimpleEventDispatcher<AttackMissing>()
 		get dispatcher(){ return AttackMissing._dispatcher }
 	}
+
+
+	//sleep magic
+
+	//sleep magicが成功した
+	export class SleepMagicSucceed extends Event.EventBase<SleepMagicSucceed>{
+		actor: GameContext.Actor
+		target: GameContext.Actor
+		//boilerplate
+		static _dispatcher: Event.SimpleEventDispatcher<SleepMagicSucceed> = new Event.SimpleEventDispatcher<SleepMagicSucceed>()
+		get dispatcher(){ return SleepMagicSucceed._dispatcher }
+	}
+
+	//sleep magicが失敗した
+	export class SleepMagicFailed extends Event.EventBase<SleepMagicFailed>{
+		actor: GameContext.Actor
+		target: GameContext.Actor
+		//boilerplate
+		static _dispatcher: Event.SimpleEventDispatcher<SleepMagicFailed> = new Event.SimpleEventDispatcher<SleepMagicFailed>()
+		get dispatcher(){ return SleepMagicFailed._dispatcher }
+	}
+
+	//眠ってる相手にsleep magicをかけようとした
+	export class SleepMagicAlreadySleeping extends Event.EventBase<SleepMagicAlreadySleeping>{
+		actor: GameContext.Actor
+		target: GameContext.Actor
+		//boilerplate
+		static _dispatcher: Event.SimpleEventDispatcher<SleepMagicAlreadySleeping> = new Event.SimpleEventDispatcher<SleepMagicAlreadySleeping>()
+		get dispatcher(){ return SleepMagicAlreadySleeping._dispatcher }
+	}
+
+	//cure magic
+
+	//cure magicが成功した
+	export class CureMagicSucceed extends Event.EventBase<CureMagicSucceed>{
+		actor: GameContext.Actor
+		curePoint: number
+		//boilerplate
+		static _dispatcher: Event.SimpleEventDispatcher<CureMagicSucceed> = new Event.SimpleEventDispatcher<CureMagicSucceed>()
+		get dispatcher(){ return CureMagicSucceed._dispatcher }
+	}
+
 }

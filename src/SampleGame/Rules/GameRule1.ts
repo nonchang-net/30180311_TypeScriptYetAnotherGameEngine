@@ -58,9 +58,17 @@ class RuleUtils{
 
 }
 
-export class BattleTurn implements GameContext.RuleBase{
-	static apply(context: GameContext.GameContext): GameContext.ApplicableGameContext{
+export class StartBattleTurn implements GameContext.RuleBase{
+	static apply(
+		context: GameContext.GameContext,
+		actionKind: GameContext.ButtleActionKind = GameContext.ButtleActionKind.Attack
+	): GameContext.ApplicableGameContext{
 		let result = new GameContext.ApplicableGameContext()
+
+		//行動種別をcontextに保存
+		context.player.currentButtleActionKind = actionKind
+		//敵は一旦一律でattack
+		context.enemy.currentButtleActionKind = GameContext.ButtleActionKind.Attack
 
 		//1/3の確率でプレイヤーが先制攻撃
 		let firstActor = context.player
@@ -77,6 +85,7 @@ export class BattleTurn implements GameContext.RuleBase{
 	}
 }
 
+
 export class AttackActorToTarget implements GameContext.RuleBase{
 	static apply(
 		context: GameContext.GameContext,
@@ -85,11 +94,72 @@ export class AttackActorToTarget implements GameContext.RuleBase{
 	): GameContext.ApplicableGameContext{
 		const result = new GameContext.ApplicableGameContext()
 
+		console.log("actor.currentButtleActionKind: ",actor.currentButtleActionKind)
+
+		if(actor.isSleep){
+			const ev = new GameEvent.Common.ActorIsSleepedAndCanNotAction()
+			ev.actor = actor
+			result.onApplicatedEvents.push(ev)
+			return result
+		}
+
 		if(! RuleUtils.canAction(
 			actor, target,
 			"AttackActorToTarget.apply()"
 		)){
 			result.onApplicatedEvents.push(new GameEvent.Common.ERROR_UNDEFINED())
+			return result
+		}
+
+		//sleepの魔法をかける
+		if(actor.currentButtleActionKind == GameContext.ButtleActionKind.SleepMagic){
+			if(target.isSleep){
+				//すでに寝てるよ
+				const ev = new GameEvent.Common.SleepMagicAlreadySleeping()
+				ev.actor = actor
+				ev.target = target
+				result.onApplicatedEvents.push(ev)
+				return result
+			}
+			if(Math.random() > 0.2){
+				//sleep magic成功
+				target.isSleep = true
+				const ev = new GameEvent.Common.SleepMagicSucceed()
+				ev.actor = actor
+				ev.target = target
+				result.onApplicatedEvents.push(ev)
+				return result
+			}
+			//sleep magic失敗
+			const ev = new GameEvent.Common.SleepMagicFailed()
+			ev.actor = actor
+			ev.target = target
+			result.onApplicatedEvents.push(ev)
+			return result
+		}
+
+		//回復の魔法
+		if(actor.currentButtleActionKind == GameContext.ButtleActionKind.CureMagic){
+			let curePoint = Math.floor( Math.random() * 20 ) + 8
+			if(actor.hp.current + curePoint > actor.hp.max){
+				curePoint = actor.hp.max - actor.hp.current
+			}
+			actor.hp.current += curePoint
+			const ev = new GameEvent.Common.CureMagicSucceed()
+			ev.actor = actor
+			ev.curePoint = curePoint
+			result.onApplicatedEvents.push(ev)
+			return result
+		}
+
+
+		//攻撃
+
+		//攻撃は1/3の確率で外れる
+		if(Math.random() > 0.6){
+			const ev = new GameEvent.Common.AttackMissing()
+			ev.actor = actor
+			result.onApplicatedEvents.push(ev)
 			return result
 		}
 
@@ -112,28 +182,16 @@ export class AttackActorToTarget implements GameContext.RuleBase{
 		ev.damage = damage
 		result.onApplicatedEvents.push(ev)
 
+		//攻撃を受けると1/2の確率で目を覚ます
+		if(target.isSleep && Math.random() > 0.5){
+			target.isSleep = false
+
+			const ev = new GameEvent.Common.ActorIsWakeUp()
+			ev.actor = target
+			result.onApplicatedEvents.push(ev)
+		}
+
 		return result
 	}
 }
 
-
-
-//プレイヤーに眠る魔法をかけるテスト
-// export class DoSleepMagicToPlayer implements GameContext.RuleBase{
-// 	static apply(context: GameContext.GameContext):
-// 	GameContext.ApplicableGameContext
-// 	{
-// 		const result = new GameContext.ApplicableGameContext()
-// 		result.playerIsSleep = Math.random()*3 > 1.5 ? true : false
-
-// 		// console.log("result.playerIsSleep",result.playerIsSleep)
-
-// 		if(result.playerIsSleep){
-// 			result.onApplicatedEvents.push(new GameEvent.TestRule.PlayerIntoSleeping())
-// 		}else{
-// 			result.onApplicatedEvents.push(new GameEvent.TestRule.PlayerDoSleepButNotSleeping())
-// 		}
-
-// 		return result
-// 	}
-// }

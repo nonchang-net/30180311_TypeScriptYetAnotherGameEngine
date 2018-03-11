@@ -90,14 +90,19 @@ export class GameContext{
 	}
 }
 
-enum GameState{
-	Boot,
-	Title,
-	Battle,
-	BattleResult,
-	GameOver,
-}
+// enum GameState{
+// 	Boot,
+// 	Title,
+// 	Battle,
+// 	BattleResult,
+// 	GameOver,
+// }
 
+export enum ButtleActionKind{
+	Attack,
+	SleepMagic,
+	CureMagic,
+}
 
 //適用コンテキスト
 
@@ -129,6 +134,8 @@ export class Actor{
 	attackVariable: number //追加ランダム攻撃力(仮)
 	deffence: number //基礎防御力
 	satiety: number //満腹度 0.0-1.0
+
+	currentButtleActionKind: ButtleActionKind
 
 	// 保留中: このActorに関するstate change eventを個別に登録できないか検討した跡。
 	// deflatedEvent,

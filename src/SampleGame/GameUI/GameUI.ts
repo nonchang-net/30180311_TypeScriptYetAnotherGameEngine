@@ -114,5 +114,59 @@ export default class UI{
 			})
 		)
 
+		GameEvent.Manager.subscribe<GameEvent.Common.ActorIsSleepedAndCanNotAction>(
+			new GameEvent.Common.ActorIsSleepedAndCanNotAction((event)=>{
+				playerStatusDiv.update(context.player)
+				enemyStatus.update(context.enemy)
+				messages.add(`${event.actor.name}は眠っていて動けない！`)
+			})
+		)
+
+		GameEvent.Manager.subscribe<GameEvent.Common.ActorIsWakeUp>(
+			new GameEvent.Common.ActorIsWakeUp((event)=>{
+				playerStatusDiv.update(context.player)
+				enemyStatus.update(context.enemy)
+				messages.add(`${event.actor.name}は目を覚ました！`)
+			})
+		)
+
+		GameEvent.Manager.subscribe<GameEvent.Common.AttackMissing>(
+			new GameEvent.Common.AttackMissing((event)=>{
+				messages.add(`${event.actor.name}の攻撃は外れた。`)
+			})
+		)
+
+		GameEvent.Manager.subscribe<GameEvent.Common.SleepMagicSucceed>(
+			new GameEvent.Common.SleepMagicSucceed((event)=>{
+				playerStatusDiv.update(context.player)
+				enemyStatus.update(context.enemy)
+				messages.add(`${event.actor.name}は sleep magicを唱えた！ ${event.target.name}は眠りにおちた！`)
+			})
+		)
+
+		GameEvent.Manager.subscribe<GameEvent.Common.SleepMagicFailed>(
+			new GameEvent.Common.SleepMagicFailed((event)=>{
+				playerStatusDiv.update(context.player)
+				enemyStatus.update(context.enemy)
+				messages.add(`${event.actor.name}は sleep magicを唱えた！ しかし${event.target.name}には効かなかった！`)
+			})
+		)
+
+		GameEvent.Manager.subscribe<GameEvent.Common.SleepMagicAlreadySleeping>(
+			new GameEvent.Common.SleepMagicAlreadySleeping((event)=>{
+				playerStatusDiv.update(context.player)
+				enemyStatus.update(context.enemy)
+				messages.add(`${event.actor.name}は sleep magicを唱えた！ しかし${event.target.name}はすでに眠っているため効果がなかった！`)
+			})
+		)
+
+		GameEvent.Manager.subscribe<GameEvent.Common.CureMagicSucceed>(
+			new GameEvent.Common.CureMagicSucceed((event)=>{
+				playerStatusDiv.update(context.player)
+				enemyStatus.update(context.enemy)
+				messages.add(`${event.actor.name}は cure magicを唱えた！ HPが${event.curePoint}回復した。`)
+			})
+		)
+
 	}
 }
