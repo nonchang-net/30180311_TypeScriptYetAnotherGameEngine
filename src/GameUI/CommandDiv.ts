@@ -13,10 +13,9 @@
 
 */
 import * as GameContext from '../GameContext';
-import * as GameEvent from '../GameEvent';
-import { default as Utils} from './GameUIUtils';
-
-import * as Rule1 from '../Rules/GameRule1'
+import { default as GameEvents } from '../GameEvents';
+import { default as Utils } from './GameUIUtils';
+import { default as GameRules } from '../Rules/GameRules'
 
 export default class CommandDiv{
 	dom: HTMLDivElement
@@ -26,7 +25,11 @@ export default class CommandDiv{
 	battleCommandSet: HTMLDivElement
 	gameoverCommandSet: HTMLDivElement
 
-	constructor(context: GameContext.GameContext){
+	constructor(
+		context: GameContext.GameContext,
+		events: GameEvents,
+		rules: GameRules
+	){
 
 		this.context = context
 
@@ -88,7 +91,7 @@ export default class CommandDiv{
 		const attackButton = document.createElement("button")
 		attackButton.innerText = "たたかう"
 		attackButton.onclick = ()=>{
-			var result =  Rule1.StartBattleTurn.apply(context)
+			var result =  rules.Battle.StartBattleTurn()
 			context.apply(result)
 		}
 		battleCommandSet.appendChild(attackButton)
@@ -99,8 +102,7 @@ export default class CommandDiv{
 		const sleepMagic = document.createElement("button")
 		sleepMagic.innerText = "スリープの魔法"
 		sleepMagic.onclick = ()=>{
-			var result =  Rule1.StartBattleTurn.apply(
-				context,
+			var result =  rules.Battle.StartBattleTurn(
 				GameContext.ButtleActionKind.SleepMagic
 			)
 			context.apply(result)
@@ -113,8 +115,7 @@ export default class CommandDiv{
 		const cureMagic = document.createElement("button")
 		cureMagic.innerText = "回復の魔法"
 		cureMagic.onclick = ()=>{
-			var result =  Rule1.StartBattleTurn.apply(
-				context,
+			var result =  rules.Battle.StartBattleTurn(
 				GameContext.ButtleActionKind.CureMagic
 			)
 			context.apply(result)
@@ -123,10 +124,11 @@ export default class CommandDiv{
 		battleCommandSet.appendChild(document.createElement("br"))
 
 		// GameState変更検知
-		GameEvent.Manager.subscribe<GameEvent.Common.GameStateChanged>(
-			new GameEvent.Common.GameStateChanged((event)=>{
+		events.Common.StateChanged.subscribe(
+			this.constructor.name,
+			()=>{
 				this.update()
-			})
+			}
 		)
 
 		this.update()

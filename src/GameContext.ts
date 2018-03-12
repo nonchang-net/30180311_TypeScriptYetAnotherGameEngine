@@ -47,22 +47,21 @@ Copyright(C) nonchang.net All rights reserved.
 
 */
 
-import * as YAGEContext from '../YetAnotherGameEngine/Context';
-import {IRule, IRuleParent} from '../YetAnotherGameEngine/Rule';
-
-import * as Event from '../YetAnotherGameEngine/Event';
-import * as GameEvent from './GameEvent';
+import { default as SimpleEvent } from './Event';
+import { default as GameEvents } from './GameEvents';
 
 /// メインコンテキスト
 
 // export class GameContext implements YAGEContext.IContext{
 export class GameContext{
 
+	private events: GameEvents
+
 	private _state: GameState = GameState.Boot
 	public get state(): GameState{ return this._state }
 	public setState(newState: GameState){
 		this._state = newState
-		GameEvent.Manager.broadcast(new GameEvent.Common.GameStateChanged())
+		this.events.Common.StateChanged.broadcast()
 	}
 
 	player: Actor
@@ -75,7 +74,8 @@ export class GameContext{
 		return [FloorRuleKind.MPGain]
 	}
 
-	constructor(){
+	constructor(events: GameEvents){
+		this.events = events
 		this.init()
 	}
 
@@ -124,7 +124,7 @@ export class GameContext{
 		}
 		for(const event of newContext.onApplicatedEvents){
 			// console.log(event)
-			GameEvent.Manager.broadcast(event)
+			event.broadcast()
 		}
 	}
 
@@ -169,9 +169,6 @@ export class ApplicableGameContext{
 	}
 }
 
-// ルール制約クラス（？）
-
-export class RuleBase implements IRule{}
 
 
 /// プレイヤー・敵の情報クラス

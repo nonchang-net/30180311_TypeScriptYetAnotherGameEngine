@@ -20,7 +20,7 @@ Copyright(C) nonchang.net All rights reserved.
 
 
 import * as GameContext from '../GameContext';
-import * as GameEvent from '../GameEvent';
+import { default as GameEvents } from '../GameEvents';
 
 
 class RuleUtils{
@@ -58,25 +58,59 @@ class RuleUtils{
 
 }
 
-// バトルターン評価
-// playerのみactionKind振り分け
+export default class GameRules{
 
-export class StartBattleTurn implements GameContext.RuleBase{
-	static apply(
+	private context: GameContext.GameContext
+	private events: GameEvents
+	public Battle: BattleRules
+	public Magic: MagicRules
+
+	constructor(
 		context: GameContext.GameContext,
+		events: GameEvents
+	){
+		this.context = context
+		this.events = events
+		this.Magic = new MagicRules(context, events)
+		this.Battle = new BattleRules(context, events, this.Magic)
+	}
+
+}
+
+class BattleRules{
+
+	private context: GameContext.GameContext
+	private events: GameEvents
+	private Magic: MagicRules
+
+	constructor(
+		context: GameContext.GameContext,
+		events: GameEvents,
+		Magic: MagicRules
+	){
+		this.context = context
+		this.events = events
+		this.Magic = Magic
+	}
+
+
+	// バトルターン評価
+	// playerのみactionKind振り分け
+	StartBattleTurn(
 		actionKind: GameContext.ButtleActionKind = GameContext.ButtleActionKind.Attack
 	): GameContext.ApplicableGameContext{
 		let result = new GameContext.ApplicableGameContext()
+		const context = this.context
 
 		//フロアルール適用
 		const floorRules = context.currentFloorInfo
 		for(const floorRule of floorRules){
 			switch(floorRule){
 				case GameContext.FloorRuleKind.MPGain :
-					result.append(InvokeMPGainByFloorRule.apply(context,1))
+					result.append(this.InvokeMPGainByFloorRule(1))
 					break
 				case GameContext.FloorRuleKind.MPGainHard :
-					result.append(InvokeMPGainByFloorRule.apply(context,10))
+					result.append(this.InvokeMPGainByFloorRule(10))
 					break
 			}
 		}
@@ -94,92 +128,84 @@ export class StartBattleTurn implements GameContext.RuleBase{
 			secondActor = context.player
 		}
 
-		result.append(InvokeBattleAction.apply(context,firstActor,secondActor))
-		result.append(InvokeBattleAction.apply(context,secondActor,firstActor))
+		result.append(this.InvokeBattleAction(firstActor,secondActor))
+		result.append(this.InvokeBattleAction(secondActor,firstActor))
 
 		return result
 	}
-}
 
-//フロア効果: 毎ターンMP回復
 
-export class InvokeMPGainByFloorRule implements GameContext.RuleBase{
-	static apply(
-		context: GameContext.GameContext,
+	//フロア効果: 毎ターンMP回復
+	InvokeMPGainByFloorRule(
 		point: number
 	): GameContext.ApplicableGameContext{
-		const result = new GameContext.ApplicableGameContext()
+		let result = new GameContext.ApplicableGameContext()
+		const context = this.context
 
 		context.player.mp.current += point
 		context.player.mp.limit()
 		context.enemy.mp.current += point
 		context.enemy.mp.limit()
-		const ev = new GameEvent.Common.InvokeFloorEffectMPGain()
-		ev.point = point
-		result.onApplicatedEvents.push(ev)
+
+		//む。まだ発動しないイベントはどうやって入れよう。
+		// const ev = this.events.FloorEffect.InvokeMPGain
+		// ev.point = point
+		// result.onApplicatedEvents.push(ev)
+
+		//→新しいイベントは即時broadcastしか考慮していなかったのでそうする。遅延タイミングで何かバグらないかどうかは要検討。
+
+		this.events.FloorEffect.InvokeMPGain.broadcast({point: point})
 
 		return result
 	}
-}
 
-//バトルアクション実行
-
-export class InvokeBattleAction implements GameContext.RuleBase{
-	static apply(
-		context: GameContext.GameContext,
+	//バトルアクション実行
+	InvokeBattleAction(
 		actor:  GameContext.Actor,
 		target: GameContext.Actor
 	): GameContext.ApplicableGameContext{
-		const result = new GameContext.ApplicableGameContext()
-
+		let result = new GameContext.ApplicableGameContext()
+		const context = this.context
 		// console.log("actor.currentButtleActionKind: ",actor.currentButtleActionKind)
 
 		if(actor.isSleep){
-			const ev = new GameEvent.Common.ActorIsSleepedAndCanNotAction()
-			ev.actor = actor
-			result.onApplicatedEvents.push(ev)
+			this.events.Battle.ActorIsSleepedAndCanNotAction.broadcast({actor: actor})
 			return result
 		}
 
 		if(! RuleUtils.canAction(
 			actor, target,
-			"AttackActorToTarget.apply()"
+			"AttackActorToTarget()"
 		)){
-			result.onApplicatedEvents.push(new GameEvent.Common.ERROR_UNDEFINED())
+			this.events.UndefinedError.broadcast({actor: actor})
 			return result
 		}
 
 		//sleepの魔法をかける
 		if(actor.currentButtleActionKind == GameContext.ButtleActionKind.SleepMagic){
-			return InvokeSleepMagic.apply(context, actor, target)
+			return this.Magic.Sleep(actor, target)
 		}
 
 		//回復の魔法を自分にかける
 		if(actor.currentButtleActionKind == GameContext.ButtleActionKind.CureMagic){
-			return InvokeCureMagic.apply(context, actor, actor)
+			return this.Magic.Cure(actor, actor)
 		}
 
 		//攻撃
-		return InvokeAttack.apply(context, actor, target)
+		return this.InvokeAttack(actor, target)
 	}
-}
 
 
-//攻撃
-
-export class InvokeAttack implements GameContext.RuleBase{
-	static apply(
-		context: GameContext.GameContext,
+	//攻撃
+	InvokeAttack(
 		actor:  GameContext.Actor,
 		target: GameContext.Actor
 	): GameContext.ApplicableGameContext{
-		const result = new GameContext.ApplicableGameContext()
-
+		let result = new GameContext.ApplicableGameContext()
+		const context = this.context
 		//攻撃は1/3の確率で外れる
 		if(Math.random() > 0.6){
-			const ev = new GameEvent.Common.AttackMissing()
-			ev.actor = actor
-			result.onApplicatedEvents.push(ev)
+			this.events.Battle.ActorAttackIsMissing.broadcast({actor: actor})
 			return result
 		}
 
@@ -187,136 +213,116 @@ export class InvokeAttack implements GameContext.RuleBase{
 
 		if(damage >= target.hp.current){
 			target.hp.current = 0
-			const ev = new GameEvent.Common.ActorAttackIsHitAndDeflated()
-			ev.actor = actor
-			ev.target = target
-			ev.damage = damage
-			result.onApplicatedEvents.push(ev)
+			this.events.Battle.ActorAttackIsHitAndDeflated.broadcast({actor: actor, target: target, damage: damage})
 			return result
 		}
 
 		target.hp.current -= damage
-		const ev = new GameEvent.Common.ActorAttackIsHit()
-		ev.actor = actor
-		ev.target = target
-		ev.damage = damage
-		result.onApplicatedEvents.push(ev)
+		this.events.Battle.ActorAttackIsHit.broadcast({actor: actor, target: target, damage: damage})
 
 		//攻撃を受けると1/2の確率で目を覚ます
 		if(target.isSleep && Math.random() > 0.5){
 			target.isSleep = false
-
-			const ev = new GameEvent.Common.ActorIsWakeUp()
-			ev.actor = target
-			result.onApplicatedEvents.push(ev)
+			this.events.Battle.ActorIsWakeUp.broadcast({actor: actor})
 		}
+		return result
+	}
 
+
+	RULE_TEMPLATE(
+	): GameContext.ApplicableGameContext{
+		let result = new GameContext.ApplicableGameContext()
+		const context = this.context
+		//何かする
 		return result
 	}
 }
 
 
-//スリープマジック
-export class InvokeSleepMagic implements GameContext.RuleBase{
+class MagicRules{
 
-	static readonly REQUIRED_MP = 12 //TODO: MasterData化
+	private context: GameContext.GameContext
+	private events: GameEvents
 
-	static apply(
+	constructor(
 		context: GameContext.GameContext,
+		events: GameEvents
+	){
+		this.context = context
+		this.events = events
+	}
+
+
+	//スリープマジック
+	readonly SLEEP_REQUIRED_MP = 12 //TODO: MasterData化
+	Sleep(
 		actor:  GameContext.Actor,
 		target: GameContext.Actor
 	): GameContext.ApplicableGameContext{
-		const result = new GameContext.ApplicableGameContext()
+		let result = new GameContext.ApplicableGameContext()
+		const context = this.context
 
-		if(actor.mp.current < this.REQUIRED_MP){
+		if(actor.mp.current < this.SLEEP_REQUIRED_MP){
 			//MP足りない！ 発動せずターン終了
-			const ev = new GameEvent.Common.MagicPointNotQuarified()
-			ev.actor = actor
-			ev.action = actor.currentButtleActionKind
-			result.onApplicatedEvents.push(ev)
+			this.events.Battle.Magic.MagicPointNotQuarified.broadcast({actor: actor, action: actor.currentButtleActionKind})
 			return result
 		}
 
-		actor.mp.current -= this.REQUIRED_MP
+		actor.mp.current -= this.SLEEP_REQUIRED_MP
 
 		if(target.isSleep){
 			//すでに寝てるよ
-			const ev = new GameEvent.Common.SleepMagicAlreadySleeping()
-			ev.actor = actor
-			ev.target = target
-			result.onApplicatedEvents.push(ev)
+			this.events.Battle.Magic.SleepWhenAlreadySleeping.broadcast({actor: actor, target: target})
 			return result
 		}
 		if(Math.random() > 0.2){
 			//sleep magic成功
 			target.isSleep = true
-			const ev = new GameEvent.Common.SleepMagicSucceed()
-			ev.actor = actor
-			ev.target = target
-			result.onApplicatedEvents.push(ev)
+			this.events.Battle.Magic.SleepSucceed.broadcast({actor: actor, target: target})
 			return result
 		}
 		//sleep magic失敗
-		const ev = new GameEvent.Common.SleepMagicFailed()
-		ev.actor = actor
-		ev.target = target
-		result.onApplicatedEvents.push(ev)
+		this.events.Battle.Magic.SleepFailed.broadcast({actor: actor, target: target})
 		return result
 	}
-}
 
 
-export class InvokeCureMagic implements GameContext.RuleBase{
-
-	static readonly REQUIRED_MP = 3  //TODO: MasterData化
-	
-	static apply(
-		context: GameContext.GameContext,
+	//回復魔法
+	readonly CURE_REQUIRED_MP = 3  //TODO: MasterData化
+	Cure(
 		actor:  GameContext.Actor,
 		target: GameContext.Actor
 	): GameContext.ApplicableGameContext{
+		let result = new GameContext.ApplicableGameContext()
+		const context = this.context
 
-		const result = new GameContext.ApplicableGameContext()
-
-
-		if(actor.mp.current < this.REQUIRED_MP){
+		if(actor.mp.current < this.CURE_REQUIRED_MP){
 			//MP足りない！ 発動せずターン終了
-			const ev = new GameEvent.Common.MagicPointNotQuarified()
-			ev.actor = actor
-			ev.action = actor.currentButtleActionKind
-			result.onApplicatedEvents.push(ev)
+			this.events.Battle.Magic.MagicPointNotQuarified.broadcast({actor: actor, action: actor.currentButtleActionKind})
 			return result
 		}
 
-		actor.mp.current -= this.REQUIRED_MP
+		actor.mp.current -= this.CURE_REQUIRED_MP
 
 		let curePoint = Math.floor( Math.random() * 20 ) + 8
 		if(actor.hp.current + curePoint > actor.hp.max){
 			curePoint = actor.hp.max - actor.hp.current
 		}
 		target.hp.current += curePoint
-		const ev = new GameEvent.Common.CureMagicSucceed()
-		ev.actor = actor
-		ev.target = target
-		ev.curePoint = curePoint
-		result.onApplicatedEvents.push(ev)
+		this.events.Battle.Magic.CureSucceed.broadcast({actor: actor, target: target, curePoint: curePoint})
 		return result
 	}
-}
 
-/*
-テンプレ
-
-
-export class AttackActorToTarget implements GameContext.RuleBase{
-	static apply(
-		context: GameContext.GameContext,
-		actor:  GameContext.Actor,
-		target: GameContext.Actor
+	RULE_TEMPLATE(
 	): GameContext.ApplicableGameContext{
-		const result = new GameContext.ApplicableGameContext()
+		let result = new GameContext.ApplicableGameContext()
+		const context = this.context
+		//何かする
 		return result
 	}
+
 }
 
-*/
+
+
+

@@ -10,7 +10,7 @@
 */
 
 import * as GameContext from '../GameContext';
-import * as GameEvent from '../GameEvent';
+// import * as GameEvent from '../GameEvents';
 import { default as Utils} from './GameUIUtils';
 
 export default class MessageDiv{

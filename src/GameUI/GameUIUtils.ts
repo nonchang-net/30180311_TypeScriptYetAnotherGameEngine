@@ -1,7 +1,7 @@
 // note: 省力化のためのstatic utilities
 
 import * as GameContext from '../GameContext';
-import * as GameEvent from '../GameEvent';
+// import * as GameEvent from '../GameEvents';
 
 export default class Utils{
 

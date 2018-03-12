@@ -13,11 +13,10 @@ Copyright(C) nonchang.net All rights reserved.
 - 一時的なテストコード書く場所
 
 */
-import * as GameContext from './SampleGame/GameContext'
-import { default as UI } from './SampleGame/GameUI/GameUI'
-// import * as Rule1 from './SampleGame/Rules/GameRule1'
-
-import * as GameEvent from './SampleGame/GameEvent';
+import * as GameContext from './GameContext'
+import { default as UI } from './GameUI/GameUI'
+import { default as GameEvents } from './GameEvents';
+import { default as GameRules } from './Rules/GameRules';
 
 // Windowスコープを拡張: コンソールからMainのpublic要素にアクセスできるように
 // 例: console.log("test",window.Main.dirty) //note: 実行時はjavascriptなので、privateプロパティも参照できる点に注意
@@ -84,10 +83,14 @@ class Main{
 	readonly ENEMIES_DATA_USE_MOCKUP = true
 
 	constructor(uiElement: HTMLElement){
-		// super()
-		const context = new GameContext.GameContext
-		const ui = new UI(context, uiElement)
 
+		//TODO: マスターデータは基本セットの初期化前に必要そう。というのはRuleのMP定義なんかはマスターデータ読み出しが必須。
+
+		//基本セット初期化
+		const events = new GameEvents()
+		const context = new GameContext.GameContext(events)
+		const rules = new GameRules(context, events)
+		const ui = new UI(context, events, rules, uiElement)
 
 		if(this.ENEMIES_DATA_USE_MOCKUP){
 			ui.nowloading.style.display = "none"
@@ -118,7 +121,8 @@ class Main{
 		}
 
 
-		//テスト
+		// テスト
+		// TODO: ちゃんとしたユニットテストに置き換えたい。フロー調べる。mocha導入？
 		// Event.Tests.test()
 	}
 
