@@ -10,60 +10,52 @@ Copyright(C) nonchang.net All rights reserved.
 
 ## メモ
 
-- YAGEの設計では、ゲーム評価はルールの集合となる。
+
+- Rulesフォルダは、ゲーム評価と処理ルーチンの集合体
+
 - Ruleクラスは非破壊処理。
 	- GameContextと引数を受け取る
 	- ApplicableGameContextを返す
 		- これには適用時に発火したいイベントのリストを詰める
+
+- ……この考え方、やめるかも。
+
+	- イベントを整理したら発火したいイベントそのものを透過的に変数格納できなくなった。
+		- これについては別途考えてもいいかも。
+
+	- 非破壊に徹する意味が今のところない。どうせ破壊的修正を加えるだろう？
+		- 「プレイログ」を考えた時には価値が出てくるけど、この場合重要なのは「ルールを実行したこと」を逐一保存できることだ。ルールの実行内容を変数に格納できる必要はなくないか……？
+
+
+	- Ruleとは？
+		- 実行すると、Contextに変更を加える
+		- 実行すると、イベントを発火することがある
+			- 無限ループに注意
+			- とりあえずは紳士協定で。根本的に無限ループが起こらないようなフロー整理は検討中……。
+			- 本質的に課題がある。
+				- イベントを受け取ってルール評価したい
+				- ルール評価されたらイベントを出したい
+				- これをどう整理していくかを考えていく。
+		- Ruleはサブルールを実行することがある
 
 */
 
 
 import * as GameContext from '../GameContext';
 import { default as GameEvents } from '../GameEvents';
+import { default as RuleUtils } from './RuleUtils';
 
 
-class RuleUtils{
-
-	//行動可能性チェック
-	static canAction(actor: GameContext.Actor, target: GameContext.Actor, actionName: string="行動"):boolean{
-
-		// 相手がいないのに行動しようとした
-		// →エラーイベントを詰めて早期return
-		if(target.hp.current <= 0){
-			console.log(`想定外動作: 相手${target.name}が生存していないのに${actor.name}が${actionName}しようとしました。`);
-			return false
-		}
-
-		if(actor.hp.current <= 0){
-			console.log(`想定外動作: ${actor.name}が生存していないのに${actionName}しようとしました。`);
-			return false
-		}
-
-		if(actor.isSleep){
-			console.log(`想定外動作: ${actor.name}が寝ているのに${actionName}しようとしました。`);
-			return false
-		}
-
-		return true
-	}
-
-	//ダメージ計算
-	static calcDamage(baseAttack: number, random: number): number{
-		return Math.floor( Math.random() * random ) + baseAttack
-	}
-	static calcDamageActor(actor: GameContext.Actor): number{
-		return this.calcDamage(actor.attack, actor.attackVariable )
-	}
-
-}
-
+// ゲーム全体ルール
+// 全てのサブルールを持つ
 export default class GameRules{
 
-	private context: GameContext.GameContext
-	private events: GameEvents
-	public Battle: BattleRules
-	public Magic: MagicRules
+	context: GameContext.GameContext
+	events: GameEvents
+	Magic: MagicRules
+	Item: ItemRules
+	Battle: BattleRules
+	Camp: CampRules
 
 	constructor(
 		context: GameContext.GameContext,
@@ -71,28 +63,39 @@ export default class GameRules{
 	){
 		this.context = context
 		this.events = events
-		this.Magic = new MagicRules(context, events)
-		this.Battle = new BattleRules(context, events, this.Magic)
+		this.Item = new ItemRules(this)
+		this.Magic = new MagicRules(this)
+		this.Camp = new CampRules(this)
+		this.Battle = new BattleRules(this)
 	}
 
 }
 
-class BattleRules{
 
-	private context: GameContext.GameContext
-	private events: GameEvents
-	private Magic: MagicRules
 
-	constructor(
-		context: GameContext.GameContext,
-		events: GameEvents,
-		Magic: MagicRules
-	){
-		this.context = context
-		this.events = events
-		this.Magic = Magic
+// アイテム使用ルール
+class ItemRules{
+	private parent: GameRules
+	constructor( parent: GameRules ){
+		this.parent = parent
 	}
+}
 
+
+// キャンプ中ルール
+class CampRules{
+	private parent: GameRules
+	constructor( parent: GameRules ){
+		this.parent = parent
+	}
+}
+
+// バトル中ルール
+class BattleRules{
+	private parent: GameRules
+	constructor( parent: GameRules ){
+		this.parent = parent
+	}
 
 	// バトルターン評価
 	// playerのみactionKind振り分け
@@ -100,7 +103,7 @@ class BattleRules{
 		actionKind: GameContext.ButtleActionKind = GameContext.ButtleActionKind.Attack
 	): GameContext.ApplicableGameContext{
 		let result = new GameContext.ApplicableGameContext()
-		const context = this.context
+		const context = this.parent.context
 
 		//フロアルール適用
 		const floorRules = context.currentFloorInfo
@@ -140,21 +143,21 @@ class BattleRules{
 		point: number
 	): GameContext.ApplicableGameContext{
 		let result = new GameContext.ApplicableGameContext()
-		const context = this.context
+		const context = this.parent.context
 
 		context.player.mp.current += point
 		context.player.mp.limit()
 		context.enemy.mp.current += point
 		context.enemy.mp.limit()
 
-		//む。まだ発動しないイベントはどうやって入れよう。
+		//む。まだ発動しないイベントはどうやって入れよう。本当はresultに含めて、発動はcontext.applyのタイミングにしたかった。（強い動機はない）
 		// const ev = this.events.FloorEffect.InvokeMPGain
 		// ev.point = point
 		// result.onApplicatedEvents.push(ev)
 
 		//→新しいイベントは即時broadcastしか考慮していなかったのでそうする。遅延タイミングで何かバグらないかどうかは要検討。
 
-		this.events.FloorEffect.InvokeMPGain.broadcast({point: point})
+		this.parent.events.FloorEffect.InvokeMPGain.broadcast({point: point})
 
 		return result
 	}
@@ -165,11 +168,11 @@ class BattleRules{
 		target: GameContext.Actor
 	): GameContext.ApplicableGameContext{
 		let result = new GameContext.ApplicableGameContext()
-		const context = this.context
+		const context = this.parent.context
 		// console.log("actor.currentButtleActionKind: ",actor.currentButtleActionKind)
 
 		if(actor.isSleep){
-			this.events.Battle.ActorIsSleepedAndCanNotAction.broadcast({actor: actor})
+			this.parent.events.Battle.ActorIsSleepedAndCanNotAction.broadcast({actor: actor})
 			return result
 		}
 
@@ -177,18 +180,18 @@ class BattleRules{
 			actor, target,
 			"AttackActorToTarget()"
 		)){
-			this.events.UndefinedError.broadcast({actor: actor})
+			this.parent.events.UndefinedError.broadcast({actor: actor})
 			return result
 		}
 
 		//sleepの魔法をかける
 		if(actor.currentButtleActionKind == GameContext.ButtleActionKind.SleepMagic){
-			return this.Magic.Sleep(actor, target)
+			return this.parent.Magic.Sleep(actor, target)
 		}
 
 		//回復の魔法を自分にかける
 		if(actor.currentButtleActionKind == GameContext.ButtleActionKind.CureMagic){
-			return this.Magic.Cure(actor, actor)
+			return this.parent.Magic.Cure(actor, actor)
 		}
 
 		//攻撃
@@ -202,10 +205,10 @@ class BattleRules{
 		target: GameContext.Actor
 	): GameContext.ApplicableGameContext{
 		let result = new GameContext.ApplicableGameContext()
-		const context = this.context
+		const context = this.parent.context
 		//攻撃は1/3の確率で外れる
 		if(Math.random() > 0.6){
-			this.events.Battle.ActorAttackIsMissing.broadcast({actor: actor})
+			this.parent.events.Battle.ActorAttackIsMissing.broadcast({actor: actor})
 			return result
 		}
 
@@ -213,17 +216,18 @@ class BattleRules{
 
 		if(damage >= target.hp.current){
 			target.hp.current = 0
-			this.events.Battle.ActorAttackIsHitAndDeflated.broadcast({actor: actor, target: target, damage: damage})
+			this.parent.events.Battle.ActorAttackIsHitAndDeflated.broadcast({actor: actor, target: target, damage: damage})
+			context.setState(GameContext.GameState.BattleResult)
 			return result
 		}
 
 		target.hp.current -= damage
-		this.events.Battle.ActorAttackIsHit.broadcast({actor: actor, target: target, damage: damage})
+		this.parent.events.Battle.ActorAttackIsHit.broadcast({actor: actor, target: target, damage: damage})
 
 		//攻撃を受けると1/2の確率で目を覚ます
 		if(target.isSleep && Math.random() > 0.5){
 			target.isSleep = false
-			this.events.Battle.ActorIsWakeUp.broadcast({actor: actor})
+			this.parent.events.Battle.ActorIsWakeUp.broadcast({actor: actor})
 		}
 		return result
 	}
@@ -232,7 +236,7 @@ class BattleRules{
 	RULE_TEMPLATE(
 	): GameContext.ApplicableGameContext{
 		let result = new GameContext.ApplicableGameContext()
-		const context = this.context
+		const context = this.parent.context
 		//何かする
 		return result
 	}
@@ -241,17 +245,10 @@ class BattleRules{
 
 class MagicRules{
 
-	private context: GameContext.GameContext
-	private events: GameEvents
-
-	constructor(
-		context: GameContext.GameContext,
-		events: GameEvents
-	){
-		this.context = context
-		this.events = events
+	private parent: GameRules
+	constructor( parent: GameRules ){
+		this.parent = parent
 	}
-
 
 	//スリープマジック
 	readonly SLEEP_REQUIRED_MP = 12 //TODO: MasterData化
@@ -260,11 +257,11 @@ class MagicRules{
 		target: GameContext.Actor
 	): GameContext.ApplicableGameContext{
 		let result = new GameContext.ApplicableGameContext()
-		const context = this.context
+		const context = this.parent.context
 
 		if(actor.mp.current < this.SLEEP_REQUIRED_MP){
 			//MP足りない！ 発動せずターン終了
-			this.events.Battle.Magic.MagicPointNotQuarified.broadcast({actor: actor, action: actor.currentButtleActionKind})
+			this.parent.events.Battle.Magic.MagicPointNotQuarified.broadcast({actor: actor, action: actor.currentButtleActionKind})
 			return result
 		}
 
@@ -272,17 +269,17 @@ class MagicRules{
 
 		if(target.isSleep){
 			//すでに寝てるよ
-			this.events.Battle.Magic.SleepWhenAlreadySleeping.broadcast({actor: actor, target: target})
+			this.parent.events.Battle.Magic.SleepWhenAlreadySleeping.broadcast({actor: actor, target: target})
 			return result
 		}
 		if(Math.random() > 0.2){
 			//sleep magic成功
 			target.isSleep = true
-			this.events.Battle.Magic.SleepSucceed.broadcast({actor: actor, target: target})
+			this.parent.events.Battle.Magic.SleepSucceed.broadcast({actor: actor, target: target})
 			return result
 		}
 		//sleep magic失敗
-		this.events.Battle.Magic.SleepFailed.broadcast({actor: actor, target: target})
+		this.parent.events.Battle.Magic.SleepFailed.broadcast({actor: actor, target: target})
 		return result
 	}
 
@@ -294,11 +291,11 @@ class MagicRules{
 		target: GameContext.Actor
 	): GameContext.ApplicableGameContext{
 		let result = new GameContext.ApplicableGameContext()
-		const context = this.context
+		const context = this.parent.context
 
 		if(actor.mp.current < this.CURE_REQUIRED_MP){
 			//MP足りない！ 発動せずターン終了
-			this.events.Battle.Magic.MagicPointNotQuarified.broadcast({actor: actor, action: actor.currentButtleActionKind})
+			this.parent.events.Battle.Magic.MagicPointNotQuarified.broadcast({actor: actor, action: actor.currentButtleActionKind})
 			return result
 		}
 
@@ -309,14 +306,14 @@ class MagicRules{
 			curePoint = actor.hp.max - actor.hp.current
 		}
 		target.hp.current += curePoint
-		this.events.Battle.Magic.CureSucceed.broadcast({actor: actor, target: target, curePoint: curePoint})
+		this.parent.events.Battle.Magic.CureSucceed.broadcast({actor: actor, target: target, curePoint: curePoint})
 		return result
 	}
 
 	RULE_TEMPLATE(
 	): GameContext.ApplicableGameContext{
 		let result = new GameContext.ApplicableGameContext()
-		const context = this.context
+		const context = this.parent.context
 		//何かする
 		return result
 	}

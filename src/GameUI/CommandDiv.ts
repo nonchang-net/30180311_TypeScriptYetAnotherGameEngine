@@ -23,6 +23,7 @@ export default class CommandDiv{
 
 	titleCommandSet: HTMLDivElement
 	battleCommandSet: HTMLDivElement
+	battleResultCommandSet: HTMLDivElement
 	gameoverCommandSet: HTMLDivElement
 
 	constructor(
@@ -62,6 +63,20 @@ export default class CommandDiv{
 		titleCommandSet.appendChild(intoDangeon)
 		titleCommandSet.appendChild(document.createElement("br"))
 
+		// ===============
+		// タイトルコマンド
+
+		const battleResultCommandSet = document.createElement("div")
+		this.battleResultCommandSet = battleResultCommandSet
+		dom.appendChild(battleResultCommandSet)
+
+		const progressDangeon = document.createElement("button")
+		progressDangeon.innerText = "洞窟を進む"
+		progressDangeon.onclick = ()=>{
+			context.setState(GameContext.GameState.Battle)
+		}
+		battleResultCommandSet.appendChild(progressDangeon)
+		battleResultCommandSet.appendChild(document.createElement("br"))
 
 		// ===============
 		// ゲームオーバー
@@ -137,8 +152,10 @@ export default class CommandDiv{
 
 	private update(){
 
+		//TODO: 多分これらはstate enumでまとめられる
 		this.titleCommandSet.style.display = "none"
 		this.battleCommandSet.style.display = "none"
+		this.battleResultCommandSet.style.display = "none"
 		this.gameoverCommandSet.style.display = "none"
 		
 
@@ -150,6 +167,10 @@ export default class CommandDiv{
 
 			case GameContext.GameState.Battle :
 				this.battleCommandSet.style.display = "block"
+				break
+
+			case GameContext.GameState.BattleResult :
+				this.battleResultCommandSet.style.display = "block"
 				break
 
 			case GameContext.GameState.GameOver :

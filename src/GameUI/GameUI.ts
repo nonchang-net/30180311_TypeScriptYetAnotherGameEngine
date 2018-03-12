@@ -120,6 +120,11 @@ export default class UI{
 						messages.add(`${context.enemy.name}が現れた！`)
 						break
 
+					case GameContext.GameState.BattleResult :
+						gameState.innerText = "battle result scene"
+						messages.add(`戦闘に勝利した。`)
+
+
 					default :
 						gameState.innerText = "undefined scene"
 				}

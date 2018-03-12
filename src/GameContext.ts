@@ -52,11 +52,13 @@ import { default as GameEvents } from './GameEvents';
 
 /// メインコンテキスト
 
-// export class GameContext implements YAGEContext.IContext{
 export class GameContext{
 
 	private events: GameEvents
 
+	//要検討: ステート管理をGameContextに持たせるのは違う気がする。
+	// ステートはsetされるとStateChangedイベントを発火するので、もっとゲームよりかも。
+	// とりあえず単一ファイルのクラスに分離しておく……？
 	private _state: GameState = GameState.Boot
 	public get state(): GameState{ return this._state }
 	public setState(newState: GameState){
@@ -89,14 +91,8 @@ export class GameContext{
 		this.player.mp = new MaxLimitedNumber(100)
 		this.player.isSleep = false
 
+		//note: enemyはenemies(マスター|モック)データを参照して切り替わります
 		this.enemy = new Actor()
-		// this.enemy.kind = ActorKind.Enemy
-		// this.enemy.name = "ドラゴン"
-		// this.enemy.attack = 6
-		// this.enemy.attackVariable = 10
-		// this.enemy.hp = new MaxLimitedNumber(120)
-		// this.enemy.mp = new MaxLimitedNumber(30)
-		// this.enemy.isSleep = false
 	}
 
 	setEnemiesByMasterData(json){
@@ -118,6 +114,7 @@ export class GameContext{
 		this.enemy = this.enemies[Math.floor(Math.random()*this.enemies.length)]
 	}
 
+	//TODO: 要検討
 	apply(newContext: ApplicableGameContext){
 		if(newContext.playerIsSleep !== null){
 			this.player.isSleep = newContext.playerIsSleep
@@ -138,6 +135,9 @@ export enum GameState{
 	GameOver,
 }
 
+
+
+//要検討: 以下はGameRules側に定義すべきかも
 export enum ButtleActionKind{
 	Attack,
 	SleepMagic,
@@ -170,6 +170,7 @@ export class ApplicableGameContext{
 }
 
 
+//TODO: 基本データ型はDataDefinitionフォルダに分けるべきかも
 
 /// プレイヤー・敵の情報クラス
 export class Actor{
@@ -191,10 +192,18 @@ export class Actor{
 	// deflatedEvent,
 	// damagedEvent,
 
+	// 要検討: ステータスフラグは単一クラスにすべきか？
 	isSleep: boolean = false
-	// constructor(){
-	// 	this.hp = new MaxLimitedNumber()
-	// }
+}
+
+export class Status{
+	status: {[kind:number]:boolean}//enumをキーにしたdictionaryを作りたい……けど無理そう
+}
+export enum StatusKind{
+	Poison,
+	Sleep,
+	DeepSleep,
+	AutoHeal,
 }
 
 export enum ActorKind{
@@ -202,7 +211,10 @@ export enum ActorKind{
 	Enemy
 }
 
-/// 最大値で制限されるパラメータ
+// Commonフォルダに分けるべきかも
+
+// 最大値で制限されるパラメータ
+// TODO: setterで代入監視したい
 class MaxLimitedNumber{
 	current: number
 	max: number
