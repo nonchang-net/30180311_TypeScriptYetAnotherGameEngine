@@ -15,7 +15,7 @@
 import * as GameContext from '../GameContext';
 import { default as GameEvents } from '../GameEvents';
 import { default as Utils } from './GameUIUtils';
-import { default as GameRules } from '../Rules/GameRules'
+import { default as GameRules } from '../Rules/Game'
 
 export default class CommandDiv{
 	dom: HTMLDivElement

@@ -19,7 +19,7 @@ Copyright(C) nonchang.net All rights reserved.
 
 import * as GameContext from '../GameContext';
 import { default as GameEvents } from '../GameEvents';
-import { default as GameRules } from '../Rules/GameRules';
+import { default as GameRules } from '../Rules/Game';
 import { default as Utils} from './GameUIUtils';
 import { default as StatusDiv } from './StatusDiv';
 import { default as CommandDiv } from './CommandDiv';

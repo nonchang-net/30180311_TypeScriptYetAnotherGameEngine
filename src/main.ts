@@ -16,7 +16,7 @@ Copyright(C) nonchang.net All rights reserved.
 import * as GameContext from './GameContext'
 import { default as UI } from './GameUI/GameUI'
 import { default as GameEvents } from './GameEvents';
-import { default as GameRules } from './Rules/GameRules';
+import { default as GameRules } from './Rules/Game';
 
 // Windowスコープを拡張: コンソールからMainのpublic要素にアクセスできるように
 // 例: console.log("test",window.Main.dirty) //note: 実行時はjavascriptなので、privateプロパティも参照できる点に注意
