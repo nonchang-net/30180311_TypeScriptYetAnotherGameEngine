@@ -95,11 +95,13 @@ export class GameContext{
 		this.enemy = new Actor()
 	}
 
+
 	setEnemiesByMasterData(json){
 		this.enemies = new Array<Actor>()
 		for(const master of json){
 			// console.log(master);
 			const actor: Actor = new Actor
+			actor.master = master
 			actor.name = master.name
 			actor.attack = master.attack
 			actor.attackVariable = master.attackVariable
@@ -107,24 +109,47 @@ export class GameContext{
 			actor.mp = new MaxLimitedNumber(master.mp)
 			this.enemies.push(actor)
 		}
-		console.log(this.enemies)
+		// console.log("enemies", this.enemies)
 	}
 
 	setNextEnemy(){
+		// const newEnemy = this.enemies[Math.floor(Math.random()*this.enemies.length)]
+		// console.log("pre",newEnemy)
+		//TODO: 色々deep copyの方法を探ったけどうまくいかず……。mp/hpが取れない？
+		// this.enemy = JSON.parse(JSON.stringify(newEnemy));
+		// this.enemy = this.deepClone<Actor>(newEnemy)
+		// this.enemy = newEnemy.clone()
+		// console.log("post",this.enemy)
+
+		//（変更しないルールの）マスターデータを元に初期化し直すように変更
+
 		this.enemy = this.enemies[Math.floor(Math.random()*this.enemies.length)]
+		this.enemy.initByThisMaster()
 	}
-
-	//TODO: 要検討
-	apply(newContext: ApplicableGameContext){
-		if(newContext.playerIsSleep !== null){
-			this.player.isSleep = newContext.playerIsSleep
-		}
-		for(const event of newContext.onApplicatedEvents){
-			// console.log(event)
-			event.broadcast()
-		}
-	}
-
+	
+	//https://github.com/ykdr2017/ts-deepcopy/blob/master/src/ts/main.ts
+	// getter/setterなfunctionがcloneされないっぽい。。
+	// deepClone<Tp>(tgt: Tp): Tp {
+	// 	let cp: Tp;
+	// 	let ptn: number = 0;
+	// 	if (tgt === null) {
+	// 		cp = tgt;
+	// 	} else if (tgt instanceof Date) {
+	// 		cp = new Date((tgt as any).getTime()) as any;
+	// 	} else if (Array.isArray(tgt)) {
+	// 		cp = [] as any;
+	// 		(tgt as any[]).forEach((v, i, arr) => { (cp as any).push(v); });
+	// 		cp = (cp as any).map((n: any) => this.deepClone<any>(n));
+	// 	} else if ((typeof(tgt) === 'object') && (tgt !== {})) {
+	// 		cp = { ...(tgt as Object) } as Tp;
+	// 		Object.keys(cp).forEach(k => {
+	// 			(cp as any)[k] = this.deepClone<any>((cp as any)[k]);
+	// 		});
+	// 	} else {
+	// 		cp = tgt;
+	// 	}
+	// 	return cp;
+	// }
 }
 
 export enum GameState{
@@ -142,6 +167,8 @@ export enum ButtleActionKind{
 	Attack,
 	SleepMagic,
 	CureMagic,
+
+	DEBUG_MaxAttack,
 }
 
 //場所によるルール種別。フロアセルがListで持つことを想定しているのでNormalはない。（つまり、ルール適用がない場合はListが空。）
@@ -155,25 +182,13 @@ export enum FloorRuleKind{
 	HPDrainHard, //行動のたびにHPが10ずつ減っていく - 「一刻も早くここから逃げ出さないと！」
 }
 
-//適用コンテキスト
-
-// export class ApplicableGameContext implements YAGEContext.IApplicableContext{
-export class ApplicableGameContext{
-	playerIsSleep:boolean|null = null
-	onApplicatedEvents = []
-
-	//コンテキストのマージ
-	append(appendContest: ApplicableGameContext){
-		this.playerIsSleep = appendContest.playerIsSleep
-		this.onApplicatedEvents = this.onApplicatedEvents.concat(appendContest.onApplicatedEvents)
-	}
-}
-
 
 //TODO: 基本データ型はDataDefinitionフォルダに分けるべきかも
 
 /// プレイヤー・敵の情報クラス
 export class Actor{
+
+	master: any
 
 	kind: ActorKind
 
@@ -194,6 +209,35 @@ export class Actor{
 
 	// 要検討: ステータスフラグは単一クラスにすべきか？
 	isSleep: boolean = false
+
+	// clone(){
+	// 	let cloned = new Actor()
+	// 	cloned.kind = this.kind
+
+	// 	cloned.name = this.name
+	// 	cloned.hp = this.hp
+	// 	cloned.attack = this.attack
+	// 	cloned.attackVariable = this.attackVariable
+	// 	cloned.deffence = this.deffence
+	// 	cloned.satiety = this.satiety
+
+	// 	cloned.mp = this.mp
+
+	// 	cloned.currentButtleActionKind = this.currentButtleActionKind
+
+	// 	return cloned
+	// }
+
+
+	//TODO: deep clone問題でトラブったので、マスターを代入しておいて、そこから再度初期化するように変更。。
+	initByThisMaster(){
+		this.name = this.master.name
+		this.attack = this.master.attack
+		this.attackVariable = this.master.attackVariable
+		this.hp = new MaxLimitedNumber(this.master.hp)
+		this.mp = new MaxLimitedNumber(this.master.mp)
+	}
+
 }
 
 export class Status{

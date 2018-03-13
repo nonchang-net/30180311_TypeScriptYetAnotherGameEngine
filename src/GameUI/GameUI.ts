@@ -145,10 +145,9 @@ export default class UI{
 			(e)=>{
 				playerStatusDiv.update(context.player)
 				enemyStatus.update(context.enemy)
-				messages.add(`${e.target.name}は倒れた！`)
+				messages.add(`${e.target.name}は${e.damage}のダメージをを受けた。勇者は倒れた！`)
 				if(e.target.kind == GameContext.ActorKind.Player){
 					messages.add(`GAME OVER!`)
-					context.setState(GameContext.GameState.GameOver)
 				}
 			}
 		)

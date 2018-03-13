@@ -15,8 +15,7 @@ export default class BattleRules{
 	// playerのみactionKind振り分け
 	StartBattleTurn(
 		actionKind: GameContext.ButtleActionKind = GameContext.ButtleActionKind.Attack
-	): GameContext.ApplicableGameContext{
-		let result = new GameContext.ApplicableGameContext()
+	){
 		const context = this.parent.context
 
 		//フロアルール適用
@@ -24,10 +23,10 @@ export default class BattleRules{
 		for(const floorRule of floorRules){
 			switch(floorRule){
 				case GameContext.FloorRuleKind.MPGain :
-					result.append(this.InvokeMPGainByFloorRule(1))
+					this.InvokeMPGainByFloorRule(1)
 					break
 				case GameContext.FloorRuleKind.MPGainHard :
-					result.append(this.InvokeMPGainByFloorRule(10))
+					this.InvokeMPGainByFloorRule(10)
 					break
 			}
 		}
@@ -45,18 +44,15 @@ export default class BattleRules{
 			secondActor = context.player
 		}
 
-		result.append(this.InvokeBattleAction(firstActor,secondActor))
-		result.append(this.InvokeBattleAction(secondActor,firstActor))
-
-		return result
+		this.InvokeBattleAction(firstActor,secondActor)
+		this.InvokeBattleAction(secondActor,firstActor)
 	}
 
 
 	//フロア効果: 毎ターンMP回復
 	InvokeMPGainByFloorRule(
 		point: number
-	): GameContext.ApplicableGameContext{
-		let result = new GameContext.ApplicableGameContext()
+	){
 		const context = this.parent.context
 
 		context.player.mp.current += point
@@ -72,44 +68,52 @@ export default class BattleRules{
 		//→新しいイベントは即時broadcastしか考慮していなかったのでそうする。遅延タイミングで何かバグらないかどうかは要検討。
 
 		this.parent.events.FloorEffect.InvokeMPGain.broadcast({point: point})
-
-		return result
+		return
 	}
 
 	//バトルアクション実行
 	InvokeBattleAction(
 		actor:  GameContext.Actor,
 		target: GameContext.Actor
-	): GameContext.ApplicableGameContext{
-		let result = new GameContext.ApplicableGameContext()
+	){
 		const context = this.parent.context
 		// console.log("actor.currentButtleActionKind: ",actor.currentButtleActionKind)
 
+		//寝てる？
 		if(actor.isSleep){
 			this.parent.events.Battle.ActorIsSleepedAndCanNotAction.broadcast({actor: actor})
-			return result
+			return
 		}
 
+		//動ける？
 		if(! Utils.canAction(
 			actor, target,
 			"AttackActorToTarget()"
 		)){
 			this.parent.events.UndefinedError.broadcast({actor: actor})
-			return result
+			return
 		}
 
 		//sleepの魔法をかける
 		if(actor.currentButtleActionKind == GameContext.ButtleActionKind.SleepMagic){
-			return this.parent.Magic.Sleep(actor, target)
+			this.parent.Magic.Sleep(actor, target)
+			return
 		}
 
 		//回復の魔法を自分にかける
 		if(actor.currentButtleActionKind == GameContext.ButtleActionKind.CureMagic){
-			return this.parent.Magic.Cure(actor, actor)
+			this.parent.Magic.Cure(actor, actor)
+			return
+		}
+
+		//デバッグ: 最大力の攻撃で倒す
+		if(actor.currentButtleActionKind == GameContext.ButtleActionKind.DEBUG_MaxAttack){
+			this.InvokeAttackWithDamagePoint(actor, target, 999999)
+			return
 		}
 
 		//攻撃
-		return this.InvokeAttack(actor, target)
+		this.InvokeAttack(actor, target)
 	}
 
 
@@ -117,22 +121,35 @@ export default class BattleRules{
 	InvokeAttack(
 		actor:  GameContext.Actor,
 		target: GameContext.Actor
-	): GameContext.ApplicableGameContext{
-		let result = new GameContext.ApplicableGameContext()
+	){
 		const context = this.parent.context
 		//攻撃は1/3の確率で外れる
 		if(Math.random() > 0.6){
 			this.parent.events.Battle.ActorAttackIsMissing.broadcast({actor: actor})
-			return result
+			return
 		}
 
 		const damage = Utils.calcDamageActor(actor)
 
+		this.InvokeAttackWithDamagePoint(actor, target, damage)
+	}
+
+	//定数で攻撃 - デバッグ用と通常攻撃用をまとめた
+	private InvokeAttackWithDamagePoint(
+		actor:  GameContext.Actor,
+		target: GameContext.Actor,
+		damage: number
+	){
+		const context = this.parent.context
 		if(damage >= target.hp.current){
 			target.hp.current = 0
 			this.parent.events.Battle.ActorAttackIsHitAndDeflated.broadcast({actor: actor, target: target, damage: damage})
-			context.setState(GameContext.GameState.BattleResult)
-			return result
+			if(target.kind == GameContext.ActorKind.Player){
+				context.setState(GameContext.GameState.GameOver)
+			}else{
+				context.setState(GameContext.GameState.BattleResult)
+			}
+			return
 		}
 
 		target.hp.current -= damage
@@ -143,16 +160,14 @@ export default class BattleRules{
 			target.isSleep = false
 			this.parent.events.Battle.ActorIsWakeUp.broadcast({actor: actor})
 		}
-		return result
 	}
 
 
 	RULE_TEMPLATE(
-	): GameContext.ApplicableGameContext{
-		let result = new GameContext.ApplicableGameContext()
+	){
 		const context = this.parent.context
 		//何かする
-		return result
+		return
 	}
 
 

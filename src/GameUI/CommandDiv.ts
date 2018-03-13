@@ -106,8 +106,7 @@ export default class CommandDiv{
 		const attackButton = document.createElement("button")
 		attackButton.innerText = "たたかう"
 		attackButton.onclick = ()=>{
-			var result =  rules.Battle.StartBattleTurn()
-			context.apply(result)
+			rules.Battle.StartBattleTurn()
 		}
 		battleCommandSet.appendChild(attackButton)
 		battleCommandSet.appendChild(document.createElement("br"))
@@ -117,10 +116,9 @@ export default class CommandDiv{
 		const sleepMagic = document.createElement("button")
 		sleepMagic.innerText = "スリープの魔法"
 		sleepMagic.onclick = ()=>{
-			var result =  rules.Battle.StartBattleTurn(
+			rules.Battle.StartBattleTurn(
 				GameContext.ButtleActionKind.SleepMagic
 			)
-			context.apply(result)
 		}
 		battleCommandSet.appendChild(sleepMagic)
 		battleCommandSet.appendChild(document.createElement("br"))
@@ -130,12 +128,23 @@ export default class CommandDiv{
 		const cureMagic = document.createElement("button")
 		cureMagic.innerText = "回復の魔法"
 		cureMagic.onclick = ()=>{
-			var result =  rules.Battle.StartBattleTurn(
+			rules.Battle.StartBattleTurn(
 				GameContext.ButtleActionKind.CureMagic
 			)
-			context.apply(result)
 		}
 		battleCommandSet.appendChild(cureMagic)
+		battleCommandSet.appendChild(document.createElement("br"))
+
+
+		//デバッグ攻撃 - 最大
+		const DEBUG_maxAttackButton = document.createElement("button")
+		DEBUG_maxAttackButton.innerText = "DEBUG: たたかいすぎる"
+		DEBUG_maxAttackButton.onclick = ()=>{
+			rules.Battle.StartBattleTurn(
+				GameContext.ButtleActionKind.DEBUG_MaxAttack
+			)
+		}
+		battleCommandSet.appendChild(DEBUG_maxAttackButton)
 		battleCommandSet.appendChild(document.createElement("br"))
 
 		// GameState変更検知

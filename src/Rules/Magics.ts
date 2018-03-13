@@ -16,14 +16,12 @@ export default class MagicRules{
 	Sleep(
 		actor:  GameContext.Actor,
 		target: GameContext.Actor
-	): GameContext.ApplicableGameContext{
-		let result = new GameContext.ApplicableGameContext()
+	){
 		const context = this.parent.context
 
 		if(actor.mp.current < this.SLEEP_REQUIRED_MP){
 			//MP足りない！ 発動せずターン終了
 			this.parent.events.Battle.Magic.MagicPointNotQuarified.broadcast({actor: actor, action: actor.currentButtleActionKind})
-			return result
 		}
 
 		actor.mp.current -= this.SLEEP_REQUIRED_MP
@@ -31,17 +29,14 @@ export default class MagicRules{
 		if(target.isSleep){
 			//すでに寝てるよ
 			this.parent.events.Battle.Magic.SleepWhenAlreadySleeping.broadcast({actor: actor, target: target})
-			return result
 		}
 		if(Math.random() > 0.2){
 			//sleep magic成功
 			target.isSleep = true
 			this.parent.events.Battle.Magic.SleepSucceed.broadcast({actor: actor, target: target})
-			return result
 		}
 		//sleep magic失敗
 		this.parent.events.Battle.Magic.SleepFailed.broadcast({actor: actor, target: target})
-		return result
 	}
 
 
@@ -50,14 +45,12 @@ export default class MagicRules{
 	Cure(
 		actor:  GameContext.Actor,
 		target: GameContext.Actor
-	): GameContext.ApplicableGameContext{
-		let result = new GameContext.ApplicableGameContext()
+	){
 		const context = this.parent.context
 
 		if(actor.mp.current < this.CURE_REQUIRED_MP){
 			//MP足りない！ 発動せずターン終了
 			this.parent.events.Battle.Magic.MagicPointNotQuarified.broadcast({actor: actor, action: actor.currentButtleActionKind})
-			return result
 		}
 
 		actor.mp.current -= this.CURE_REQUIRED_MP
@@ -68,15 +61,6 @@ export default class MagicRules{
 		}
 		target.hp.current += curePoint
 		this.parent.events.Battle.Magic.CureSucceed.broadcast({actor: actor, target: target, curePoint: curePoint})
-		return result
-	}
-
-	RULE_TEMPLATE(
-	): GameContext.ApplicableGameContext{
-		let result = new GameContext.ApplicableGameContext()
-		const context = this.parent.context
-		//何かする
-		return result
 	}
 
 }
