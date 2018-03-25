@@ -18,6 +18,9 @@ import { default as UI } from './GameUI/GameUI'
 import { default as GameEvents } from './GameEvents';
 import { default as GameRules } from './Rules/Game';
 
+import * as MasterData from './MasterData/MasterData';
+
+
 // Windowスコープを拡張: コンソールからMainのpublic要素にアクセスできるように
 // 例: console.log("test",window.Main.dirty) //note: 実行時はjavascriptなので、privateプロパティも参照できる点に注意
 declare global{
@@ -35,97 +38,38 @@ window.addEventListener('DOMContentLoaded', () => {
 
 class Main{
 
-	//TODO: jsonはS3にdデプロイしたい
-	readonly MASTER_DATA_ENEMIES_URL: string = "https://script.googleusercontent.com/macros/echo?user_content_key=yKK-ZUzj02ZwKXWFT39B8QquttV0bC9w57OUmnUBof-pCFXaMcQ-BJdATX6I2Dymszq5_qJOMQhWpcZG1F34RX92QEzmgSyfm5_BxDlH2jW0nuo2oDemN9CCS2h10ox_1xSncGQajx_ryfhECjZEnAJjrIvQ97z0RW-0xPK1w48qcTuPdn844uwwbw2T51YtYioAfvWxA81WU9kqGDrfop0mgLDwm9cO&lib=Mm0OfG4rpMmjOijnmsnJqouS5Zx1wbZ9l"
-
-	readonly MASTER_DATA_EENEMIES_MOCKUP: string = `[
-		{
-			"ID": 1,
-			"kind": "Enemy",
-			"name": "スライム",
-			"undefinedName": "粘液状の生き物",
-			"attack": 1,
-			"attackVariable": 3,
-			"hp": 8,
-			"mp": 0,
-			"_AI種別": "【単一】攻撃",
-			"aiKind": "#VALUE!",
-			"dropKind": "TODO - aikind設定後。これも種別選択で選べるようにしたい"
-		},
-		{
-			"ID": 2,
-			"kind": "Enemy_BigBoss",
-			"name": "ドラゴン",
-			"undefinedName": "大型の化け物",
-			"attack": 6,
-			"attackVariable": 10,
-			"hp": 120,
-			"mp": 30,
-			"_AI種別": "【複合】攻撃3 : sleep magic1",
-			"aiKind": "",
-			"dropKind": ""
-		},
-		{
-			"ID": 3,
-			"kind": "Enemy",
-			"name": "キラービー",
-			"undefinedName": "飛び回る生き物",
-			"attack": 3,
-			"attackVariable": 6,
-			"hp": 4,
-			"mp": 0,
-			"_AI種別": "【単一】攻撃",
-			"aiKind": "",
-			"dropKind": ""
-		}
-	]`
-
-	readonly ENEMIES_DATA_USE_MOCKUP = true
-
 	constructor(uiElement: HTMLElement){
-
-		//TODO: マスターデータは基本セットの初期化前に必要そう。というのはRuleのMP定義なんかはマスターデータ読み出しが必須。
 
 		//基本セット初期化
 		const events = new GameEvents()
 		const context = new GameContext.GameContext(events)
+
+		//UNDONE: 検討中。Ruleの初期化前にマスターデータの初期化が必要だろうか……？
+		// - 例えばある魔法の必要MPの定義はマスターデータに起きたいだろう。
+		// - でも、初期化は順序に依存させたくないかなぁ。
+		// 	- マスターデータはnowloadingのためにui初期化済みであることを要求し、UIはrulesが初期化済みであることを要求している。すでに順序依存は発生しているわけだ。
+		// - そうなると、rulesはcontextを介してマスターデータを参照させるべきだろうか。
+		// - その考えで問題が発生しないか、よく検討する必要がある。
 		const rules = new GameRules(context, events)
+
 		const ui = new UI(context, events, rules, uiElement)
 
-		if(this.ENEMIES_DATA_USE_MOCKUP){
+		const masterData = new MasterData.MasterData(context)
+
+		//非同期初期化系の処理をasync/awaitでwrap
+		;(async ()=>{
+			ui.nowloading.style.display = "block"
+			await masterData.asyncSetup()
 			ui.nowloading.style.display = "none"
-			context.setEnemiesByMasterData(JSON.parse(this.MASTER_DATA_EENEMIES_MOCKUP))
-			context.setState(GameContext.GameState.Title)
-		}else{
-			//S3に置いたマスターデータを取得してみる
-			;(async ()=>{
-				try {
-					
-					//テスト用: 通信待ちエミュレーション
-					// await new Promise(r => setTimeout(r, 500));
 	
-					//fetch
-					let response = await fetch(this.MASTER_DATA_ENEMIES_URL);
-					return response.json();
-				} catch(e) {
-					console.log("Error!");
-				}
-			})().then((data)=>{
-				console.log("fetch succeed.",data);
-				ui.nowloading.style.display = "none"
-				context.setEnemiesByMasterData(data)
-				// 初期化イベント
-				context.setState(GameContext.GameState.Title)
-			})
-
-		}
-
+			// 初期化イベント
+			context.setState(GameContext.GameState.Title)
+		})()
 
 		// テスト
 		// TODO: ちゃんとしたユニットテストに置き換えたい。フロー調べる。mocha導入？
 		// Event.Tests.test()
 	}
 
-	
 }
 
